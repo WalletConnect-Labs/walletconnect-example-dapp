@@ -154,8 +154,8 @@ class App extends React.Component<any, any> {
   };
 
   public walletConnectInit = async () => {
-    // test bridge url
-    const bridge = "https://test-bridge.walletconnect.org";
+    // bridge url
+    const bridge = "https://bridge.walletconnect.org";
 
     // create new walletConnector
     const walletConnector = new WalletConnect({ bridge });
@@ -165,35 +165,19 @@ class App extends React.Component<any, any> {
     // check if already connected
     if (!walletConnector.connected) {
       // create new session
-      this.createSession();
-    } else {
-      // subscribe to events
-      this.subscribeToEvents();
+      await walletConnector.createSession();
+
+      // get uri for QR Code modal
+      const uri = walletConnector.uri;
+
+      // display QR Code modal
+      WalletConnectQRCodeModal.open(uri, () => {
+        console.log("QR Code Modal closed"); // tslint:disable-line
+      });
     }
-  };
-
-  public createSession = async () => {
-    const { walletConnector } = this.state;
-
-    if (!walletConnector) {
-      return;
-    }
-
-    // create new session if not connected
-    await walletConnector.createSession();
-
-    // get uri for QR Code modal
-    const uri = walletConnector.uri;
-
-    // display QR Code modal
-    WalletConnectQRCodeModal.open(uri, () => {
-      console.log("QR Code Modal closed"); // tslint:disable-line
-    });
-
     // subscribe to events
-    this.subscribeToEvents();
+    await this.subscribeToEvents();
   };
-
   public subscribeToEvents = () => {
     const { walletConnector } = this.state;
 
