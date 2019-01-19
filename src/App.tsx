@@ -160,6 +160,8 @@ class App extends React.Component<any, any> {
     // create new walletConnector
     const walletConnector = new WalletConnect({ bridge });
 
+    window.walletConnector = walletConnector;
+
     await this.setState({ walletConnector });
 
     // check if already connected
