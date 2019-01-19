@@ -70,7 +70,7 @@ Loader.propTypes = {
 
 Loader.defaultProps = {
   size: 40,
-  color: "walletconnect"
+  color: "lightBlue"
 };
 
 export default Loader;
