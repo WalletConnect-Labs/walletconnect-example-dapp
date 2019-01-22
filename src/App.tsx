@@ -511,7 +511,6 @@ class App extends React.Component<any, any> {
                 <SButtonContainer>
                   <SConnectButton
                     left
-                    color="walletconnect"
                     onClick={this.walletConnectInit}
                     fetching={fetching}
                   >
@@ -524,26 +523,17 @@ class App extends React.Component<any, any> {
                 <h3>Actions</h3>
                 <Column center>
                   <STestButtonContainer>
-                    <STestButton
-                      left
-                      color="walletconnect"
-                      onClick={this.testSendTransaction}
-                    >
+                    <STestButton left onClick={this.testSendTransaction}>
                       {"Send Test Transaction"}
                     </STestButton>
 
-                    <STestButton
-                      left
-                      color="walletconnect"
-                      onClick={this.testSignMessage}
-                    >
+                    <STestButton left onClick={this.testSignMessage}>
                       {"Sign Test Message"}
                     </STestButton>
 
                     <STestButton
                       disabled
                       left
-                      color="walletconnect"
                       // onClick={this.testSignTypedData}
                     >
                       {"Sign Test Typed Data"}
