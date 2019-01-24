@@ -254,6 +254,7 @@ class App extends React.Component<any, any> {
       accounts,
       address
     });
+    WalletConnectQRCodeModal.close();
     this.getAccountAssets();
   };
 
