@@ -1,5 +1,5 @@
 import { providers } from "ethers";
-import { convertUtf8ToHex } from "@walletconnect/utils";
+// import { convertUtf8ToHex } from "@walletconnect/utils";
 import { TypedDataUtils } from "eth-sig-util";
 import * as ethUtil from "ethereumjs-util";
 import { IChainData } from "./types";
@@ -126,21 +126,21 @@ export function getChainData(chainId: number): IChainData {
   return chainData;
 }
 
-export function encodePersonalMessage(msg: string): string {
-  const data = ethUtil.toBuffer(convertUtf8ToHex(msg));
-  const buf = Buffer.concat([
-    Buffer.from("\u0019Ethereum Signed Message:\n" + data.length.toString(), "utf8"),
-    data,
-  ]);
-  return ethUtil.bufferToHex(buf);
-}
+// export function encodePersonalMessage(msg: string): string {
+//   const data = ethUtil.toBuffer(convertUtf8ToHex(msg));
+//   const buf = Buffer.concat([
+//     Buffer.from("\u0019Ethereum Signed Message:\n" + data.length.toString(), "utf8"),
+//     data,
+//   ]);
+//   return ethUtil.bufferToHex(buf);
+// }
 
-export function hashPersonalMessage(msg: string): string {
-  const data = encodePersonalMessage(msg);
-  const buf = ethUtil.toBuffer(data);
-  const hash = ethUtil.keccak256(buf);
-  return ethUtil.bufferToHex(hash);
-}
+// export function hashPersonalMessage(msg: string): string {
+//   const data = encodePersonalMessage(msg);
+//   const buf = ethUtil.toBuffer(data);
+//   const hash = ethUtil.keccak256(buf);
+//   return ethUtil.bufferToHex(hash);
+// }
 
 export function encodeTypedDataMessage(msg: string): string {
   const useV4 = true;
@@ -167,11 +167,11 @@ export function recoverPublicKey(sig: string, hash: string): string {
   return signer;
 }
 
-export function recoverPersonalSignature(sig: string, msg: string): string {
-  const hash = hashPersonalMessage(msg);
-  const signer = recoverPublicKey(sig, hash);
-  return signer;
-}
+// export function recoverPersonalSignature(sig: string, msg: string): string {
+//   const hash = hashPersonalMessage(msg);
+//   const signer = recoverPublicKey(sig, hash);
+//   return signer;
+// }
 
 export function recoverTypedMessage(sig: string, msg: string): string {
   const hash = hashTypedDataMessage(msg);
