@@ -1,8 +1,9 @@
 import * as React from "react";
 import styled from "styled-components";
-import WalletConnect from "./lib";
-import WalletConnectQRCodeModal from "./qrcode-modal";
-import AssetRow from "./components/AssetRow";
+import WalletConnect from "@walletconnect/client";
+import QRCodeModal from "@walletconnect/qrcode-modal";
+import { convertUtf8ToHex } from "@walletconnect/utils";
+import { IInternalEvent } from "@walletconnect/types";
 import Button from "./components/Button";
 import Column from "./components/Column";
 import Wrapper from "./components/Wrapper";
@@ -10,46 +11,43 @@ import Modal from "./components/Modal";
 import Header from "./components/Header";
 import Loader from "./components/Loader";
 import { fonts } from "./styles";
+import { apiGetAccountAssets, apiGetGasPrices, apiGetAccountNonce } from "./helpers/api";
 import {
-  apiGetAccountAssets,
-  apiGetGasPrices,
-  apiGetAccountNonce
-} from "./helpers/api";
-// import {
-//   recoverTypedSignature
-// } from "./helpers/ethSigUtil";
-import { sanitizeHex, ecrecover } from "./helpers/utilities";
-import {
-  convertAmountToRawNumber,
-  convertStringToHex
-} from "./helpers/bignumber";
+  sanitizeHex,
+  verifySignature,
+  hashTypedDataMessage,
+  hashPersonalMessage,
+} from "./helpers/utilities";
+import { convertAmountToRawNumber, convertStringToHex } from "./helpers/bignumber";
 import { IAssetData } from "./helpers/types";
-import { IInternalEvent } from "./lib/types";
+import Banner from "./components/Banner";
+import AccountAssets from "./components/AccountAssets";
+import { eip712 } from "./helpers/eip712";
 
 const SLayout = styled.div`
   position: relative;
   width: 100%;
-  height: 100%;
+  /* height: 100%; */
   min-height: 100vh;
   text-align: center;
 `;
 
-const SContent = styled(Wrapper)`
+const SContent = styled(Wrapper as any)`
   width: 100%;
   height: 100%;
   padding: 0 16px;
 `;
 
-const SLanding = styled(Column)`
+const SLanding = styled(Column as any)`
   height: 600px;
 `;
 
-const SButtonContainer = styled(Column)`
+const SButtonContainer = styled(Column as any)`
   width: 250px;
   margin: 50px 0;
 `;
 
-const SConnectButton = styled(Button)`
+const SConnectButton = styled(Button as any)`
   border-radius: 8px;
   font-size: ${fonts.size.medium};
   height: 44px;
@@ -67,6 +65,12 @@ const SContainer = styled.div`
   word-break: break-word;
 `;
 
+const SModalContainer = styled.div`
+  width: 100%;
+  position: relative;
+  word-wrap: break-word;
+`;
+
 const SModalTitle = styled.div`
   margin: 1em 0;
   font-size: 20px;
@@ -77,14 +81,15 @@ const SModalParagraph = styled.p`
   margin-top: 30px;
 `;
 
-const SBalances = styled(SLanding)`
+// @ts-ignore
+const SBalances = styled(SLanding as any)`
   height: 100%;
   & h3 {
     padding-top: 30px;
   }
 `;
 
-const STable = styled(SContainer)`
+const STable = styled(SContainer as any)`
   flex-direction: column;
   text-align: left;
 `;
@@ -108,20 +113,22 @@ const SValue = styled.div`
 const STestButtonContainer = styled.div`
   width: 100%;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  flex-wrap: wrap;
 `;
 
-const STestButton = styled(Button)`
+const STestButton = styled(Button as any)`
   border-radius: 8px;
   font-size: ${fonts.size.medium};
   height: 44px;
   width: 100%;
+  max-width: 175px;
   margin: 12px;
 `;
 
 interface IAppState {
-  walletConnector: WalletConnect | null;
+  connector: WalletConnect | null;
   fetching: boolean;
   connected: boolean;
   chainId: number;
@@ -135,7 +142,7 @@ interface IAppState {
 }
 
 const INITIAL_STATE: IAppState = {
-  walletConnector: null,
+  connector: null,
   fetching: false,
   connected: false,
   chainId: 1,
@@ -145,62 +152,52 @@ const INITIAL_STATE: IAppState = {
   accounts: [],
   address: "",
   result: null,
-  assets: []
+  assets: [],
 };
 
 class App extends React.Component<any, any> {
   public state: IAppState = {
-    ...INITIAL_STATE
+    ...INITIAL_STATE,
   };
 
   public walletConnectInit = async () => {
     // bridge url
     const bridge = "https://bridge.walletconnect.org";
 
-    // create new walletConnector
-    const walletConnector = new WalletConnect({ bridge });
+    // create new connector
+    const connector = new WalletConnect({ bridge, qrcodeModal: QRCodeModal });
 
-    window.walletConnector = walletConnector;
-
-    await this.setState({ walletConnector });
+    await this.setState({ connector });
 
     // check if already connected
-    if (!walletConnector.connected) {
+    if (!connector.connected) {
       // create new session
-      await walletConnector.createSession();
-
-      // get uri for QR Code modal
-      const uri = walletConnector.uri;
-
-      // display QR Code modal
-      WalletConnectQRCodeModal.open(uri, () => {
-        console.log("QR Code Modal closed"); // tslint:disable-line
-      });
+      await connector.createSession();
     }
+
     // subscribe to events
     await this.subscribeToEvents();
   };
   public subscribeToEvents = () => {
-    const { walletConnector } = this.state;
+    const { connector } = this.state;
 
-    if (!walletConnector) {
+    if (!connector) {
       return;
     }
 
-    walletConnector.on("session_update", (error, payload) => {
-      console.log('walletConnector.on("session_update")'); // tslint:disable-line
+    connector.on("session_update", async (error, payload) => {
+      console.log(`connector.on("session_update")`);
 
       if (error) {
         throw error;
       }
 
       const { chainId, accounts } = payload.params[0];
-      const address = accounts[0];
-      this.setState({ chainId, accounts, address });
+      this.onSessionUpdate(accounts, chainId);
     });
 
-    walletConnector.on("connect", (error, payload) => {
-      console.log('walletConnector.on("connect")'); // tslint:disable-line
+    connector.on("connect", (error, payload) => {
+      console.log(`connector.on("connect")`);
 
       if (error) {
         throw error;
@@ -209,34 +206,35 @@ class App extends React.Component<any, any> {
       this.onConnect(payload);
     });
 
-    walletConnector.on("disconnect", (error, payload) => {
-      console.log('walletConnector.on("disconnect")'); // tslint:disable-line
+    connector.on("disconnect", (error, payload) => {
+      console.log(`connector.on("disconnect")`);
 
       if (error) {
         throw error;
       }
 
-      this.resetApp();
+      this.onDisconnect();
     });
 
-    if (walletConnector.connected) {
-      const { chainId, accounts } = walletConnector;
+    if (connector.connected) {
+      const { chainId, accounts } = connector;
       const address = accounts[0];
       this.setState({
         connected: true,
         chainId,
         accounts,
-        address
+        address,
       });
+      this.onSessionUpdate(accounts, chainId);
     }
 
-    this.setState({ walletConnector });
+    this.setState({ connector });
   };
 
   public killSession = async () => {
-    const { walletConnector } = this.state;
-    if (walletConnector) {
-      walletConnector.killSession();
+    const { connector } = this.state;
+    if (connector) {
+      connector.killSession();
     }
     this.resetApp();
   };
@@ -252,29 +250,41 @@ class App extends React.Component<any, any> {
       connected: true,
       chainId,
       accounts,
-      address
+      address,
     });
-    WalletConnectQRCodeModal.close();
     this.getAccountAssets();
+  };
+
+  public onDisconnect = async () => {
+    this.resetApp();
+  };
+
+  public onSessionUpdate = async (accounts: string[], chainId: number) => {
+    const address = accounts[0];
+    await this.setState({ chainId, accounts, address });
+    await this.getAccountAssets();
   };
 
   public getAccountAssets = async () => {
     const { address, chainId } = this.state;
     this.setState({ fetching: true });
+    try {
+      // get account balances
+      const assets = await apiGetAccountAssets(address, chainId);
 
-    // get account balances
-    const assets = await apiGetAccountAssets(address, chainId);
-
-    await this.setState({ fetching: false, address, assets });
+      await this.setState({ fetching: false, address, assets });
+    } catch (error) {
+      console.error(error);
+      await this.setState({ fetching: false });
+    }
   };
 
-  public toggleModal = () =>
-    this.setState({ showModal: !this.state.showModal });
+  public toggleModal = () => this.setState({ showModal: !this.state.showModal });
 
   public testSendTransaction = async () => {
-    const { walletConnector, address, chainId } = this.state;
+    const { connector, address, chainId } = this.state;
 
-    if (!walletConnector) {
+    if (!connector) {
       return;
     }
 
@@ -285,22 +295,21 @@ class App extends React.Component<any, any> {
     const to = address;
 
     // nonce
-    const nonceRes = await apiGetAccountNonce(address, chainId);
-    const nonce = nonceRes.data.result;
+    const _nonce = await apiGetAccountNonce(address, chainId);
+    const nonce = sanitizeHex(convertStringToHex(_nonce));
 
     // gasPrice
     const gasPrices = await apiGetGasPrices();
     const _gasPrice = gasPrices.slow.price;
-    const gasPrice = sanitizeHex(
-      convertStringToHex(convertAmountToRawNumber(_gasPrice, 9))
-    );
+    const gasPrice = sanitizeHex(convertStringToHex(convertAmountToRawNumber(_gasPrice, 9)));
 
     // gasLimit
     const _gasLimit = 21000;
     const gasLimit = sanitizeHex(convertStringToHex(_gasLimit));
 
     // value
-    const value = "0x00";
+    const _value = 0;
+    const value = sanitizeHex(convertStringToHex(_value));
 
     // data
     const data = "0x";
@@ -313,7 +322,7 @@ class App extends React.Component<any, any> {
       gasPrice,
       gasLimit,
       value,
-      data
+      data,
     };
 
     try {
@@ -324,7 +333,7 @@ class App extends React.Component<any, any> {
       this.setState({ pendingRequest: true });
 
       // send transaction
-      const result = await walletConnector.sendTransaction(tx);
+      const result = await connector.sendTransaction(tx);
 
       // format displayed result
       const formattedResult = {
@@ -332,30 +341,36 @@ class App extends React.Component<any, any> {
         txHash: result,
         from: address,
         to: address,
-        value: "0 ETH"
+        value: "0 ETH",
       };
 
       // display result
       this.setState({
-        walletConnector,
+        connector,
         pendingRequest: false,
-        result: formattedResult || null
+        result: formattedResult || null,
       });
     } catch (error) {
-      console.error(error); // tslint:disable-line
-      this.setState({ walletConnector, pendingRequest: false, result: null });
+      console.error(error);
+      this.setState({ connector, pendingRequest: false, result: null });
     }
   };
 
-  public testSignMessage = async () => {
-    const { walletConnector, address } = this.state;
+  public testSignPersonalMessage = async () => {
+    const { connector, address, chainId } = this.state;
 
-    if (!walletConnector) {
+    if (!connector) {
       return;
     }
 
     // test message
-    const msgParams = [address, "My email is john@doe.com - 1537836206101"];
+    const message = "My email is john@doe.com - 1537836206101";
+
+    // encode message (hex)
+    const hexMsg = convertUtf8ToHex(message);
+
+    // personal_sign params
+    const msgParams = [hexMsg, address];
 
     try {
       // open modal
@@ -365,190 +380,134 @@ class App extends React.Component<any, any> {
       this.setState({ pendingRequest: true });
 
       // send message
-      const result = await walletConnector.signMessage(msgParams);
+      const result = await connector.signPersonalMessage(msgParams);
 
       // verify signature
-      const signer = ecrecover(result, msgParams[1]);
-      const verified = signer.toLowerCase() === address.toLowerCase();
+      const hash = hashPersonalMessage(message);
+      const valid = await verifySignature(address, result, hash, chainId);
 
       // format displayed result
       const formattedResult = {
-        method: "eth_sign",
+        method: "personal_sign",
         address,
-        signer,
-        verified,
-        result
+        valid,
+        result,
       };
 
       // display result
       this.setState({
-        walletConnector,
+        connector,
         pendingRequest: false,
-        result: formattedResult || null
+        result: formattedResult || null,
       });
     } catch (error) {
-      console.error(error); // tslint:disable-line
-      this.setState({ walletConnector, pendingRequest: false, result: null });
+      console.error(error);
+      this.setState({ connector, pendingRequest: false, result: null });
     }
   };
 
-  // public testSignTypedData = async () => {
-  //   const { walletConnector, address } = this.state;
+  public testSignTypedData = async () => {
+    const { connector, address, chainId } = this.state;
 
-  //   if (!walletConnector) {
-  //     return;
-  //   }
+    if (!connector) {
+      return;
+    }
 
-  //   // test typed data
-  //   const msgParams = [
-  //     address,
-  //     {
-  //       types: {
-  //         EIP712Domain: [
-  //           { name: "name", type: "string" },
-  //           { name: "version", type: "string" },
-  //           { name: "chainId", type: "uint256" },
-  //           { name: "verifyingContract", type: "address" }
-  //         ],
-  //         Person: [
-  //           { name: "name", type: "string" },
-  //           { name: "account", type: "address" }
-  //         ],
-  //         Mail: [
-  //           { name: "from", type: "Person" },
-  //           { name: "to", type: "Person" },
-  //           { name: "contents", type: "string" }
-  //         ]
-  //       },
-  //       primaryType: "Mail",
-  //       domain: {
-  //         name: "Example Dapp",
-  //         version: "0.7.0",
-  //         chainId: 1,
-  //         verifyingContract: "0x0000000000000000000000000000000000000000"
-  //       },
-  //       message: {
-  //         from: {
-  //           name: "Alice",
-  //           account: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  //         },
-  //         to: {
-  //           name: "Bob",
-  //           account: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  //         },
-  //         contents: "Hey, Bob!"
-  //       }
-  //     }
-  //   ];
+    const message = JSON.stringify(eip712.example);
 
-  //   try {
-  //     // open modal
-  //     this.toggleModal();
+    // eth_signTypedData params
+    const msgParams = [address, message];
 
-  //     // toggle pending request indicator
-  //     this.setState({ pendingRequest: true });
+    try {
+      // open modal
+      this.toggleModal();
 
-  //     // sign typed data
-  //     const result = await walletConnector.signTypedData(msgParams);
+      // toggle pending request indicator
+      this.setState({ pendingRequest: true });
 
-  //      // verify signature
-  //      const signer = ecrecover(result, msgParams[1]);
-  //      const verified = signer.toLowerCase() === address.toLowerCase();
+      // sign typed data
+      const result = await connector.signTypedData(msgParams);
 
-  //     // format displayed result
-  //     const formattedResult = {
-  //       method: "eth_signTypedData",
-  //       address,
-  //       signer,
-  //       verified,
-  //       result
-  //     };
+      // verify signature
+      const hash = hashTypedDataMessage(message);
+      const valid = await verifySignature(address, result, hash, chainId);
 
-  //     // display result
-  //     this.setState({
-  //       walletConnector,
-  //       pendingRequest: false,
-  //       result: formattedResult || null
-  //     });
-  //   } catch (error) {
-  //     console.error(error);
-  //     this.setState({ walletConnector, pendingRequest: false, result: null });
-  //   }
-  // };
+      // format displayed result
+      const formattedResult = {
+        method: "eth_signTypedData",
+        address,
+        valid,
+        result,
+      };
+
+      // display result
+      this.setState({
+        connector,
+        pendingRequest: false,
+        result: formattedResult || null,
+      });
+    } catch (error) {
+      console.error(error);
+      this.setState({ connector, pendingRequest: false, result: null });
+    }
+  };
 
   public render = () => {
     const {
       assets,
       address,
+      connected,
+      chainId,
       fetching,
       showModal,
       pendingRequest,
-      result
+      result,
     } = this.state;
-    let ethereum: IAssetData = {
-      contractAddress: "",
-      name: "Ethereum",
-      symbol: "ETH",
-      decimals: "18",
-      balance: "0"
-    };
-    let tokens: IAssetData[] = [];
-    if (assets.length) {
-      ethereum = assets.filter(
-        (asset: IAssetData) => asset.symbol.toLowerCase() === "eth"
-      )[0];
-      tokens = assets.filter(
-        (asset: IAssetData) => asset.symbol.toLowerCase() !== "eth"
-      );
-    }
     return (
       <SLayout>
         <Column maxWidth={1000} spanHeight>
-          <Header address={address} killSession={this.killSession} />
+          <Header
+            connected={connected}
+            address={address}
+            chainId={chainId}
+            killSession={this.killSession}
+          />
           <SContent>
             {!address && !assets.length ? (
               <SLanding center>
-                <h3>Try out WalletConnect!</h3>
+                <h3>
+                  {`Try out WalletConnect`}
+                  <br />
+                  <span>{`v${process.env.REACT_APP_VERSION}`}</span>
+                </h3>
                 <SButtonContainer>
-                  <SConnectButton
-                    left
-                    onClick={this.walletConnectInit}
-                    fetching={fetching}
-                  >
+                  <SConnectButton left onClick={this.walletConnectInit} fetching={fetching}>
                     {"Connect to WalletConnect"}
                   </SConnectButton>
                 </SButtonContainer>
               </SLanding>
             ) : (
               <SBalances>
+                <Banner />
                 <h3>Actions</h3>
                 <Column center>
                   <STestButtonContainer>
                     <STestButton left onClick={this.testSendTransaction}>
-                      {"Send Test Transaction"}
+                      {"eth_sendTransaction"}
                     </STestButton>
 
-                    <STestButton left onClick={this.testSignMessage}>
-                      {"Sign Test Message"}
+                    <STestButton left onClick={this.testSignPersonalMessage}>
+                      {"personal_sign"}
                     </STestButton>
 
-                    <STestButton
-                      disabled
-                      left
-                      // onClick={this.testSignTypedData}
-                    >
-                      {"Sign Test Typed Data"}
+                    <STestButton left onClick={this.testSignTypedData}>
+                      {"eth_signTypedData"}
                     </STestButton>
                   </STestButtonContainer>
                 </Column>
                 <h3>Balances</h3>
                 {!fetching ? (
-                  <Column center>
-                    <AssetRow key="Ethereum" asset={ethereum} />
-                    {tokens.map(token => (
-                      <AssetRow key={token.symbol} asset={token} />
-                    ))}
-                  </Column>
+                  <AccountAssets chainId={chainId} assets={assets} />
                 ) : (
                   <Column center>
                     <SContainer>
@@ -562,17 +521,15 @@ class App extends React.Component<any, any> {
         </Column>
         <Modal show={showModal} toggleModal={this.toggleModal}>
           {pendingRequest ? (
-            <div>
+            <SModalContainer>
               <SModalTitle>{"Pending Call Request"}</SModalTitle>
               <SContainer>
                 <Loader />
-                <SModalParagraph>
-                  {"Approve or reject request using your wallet"}
-                </SModalParagraph>
+                <SModalParagraph>{"Approve or reject request using your wallet"}</SModalParagraph>
               </SContainer>
-            </div>
+            </SModalContainer>
           ) : result ? (
-            <div>
+            <SModalContainer>
               <SModalTitle>{"Call Request Approved"}</SModalTitle>
               <STable>
                 {Object.keys(result).map(key => (
@@ -582,11 +539,11 @@ class App extends React.Component<any, any> {
                   </SRow>
                 ))}
               </STable>
-            </div>
+            </SModalContainer>
           ) : (
-            <div>
+            <SModalContainer>
               <SModalTitle>{"Call Request Rejected"}</SModalTitle>
-            </div>
+            </SModalContainer>
           )}
         </Modal>
       </SLayout>

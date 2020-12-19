@@ -12,8 +12,7 @@ interface IColumnProps extends IColumnStyleProps {
   children: React.ReactNode;
 }
 
-const SColumnStyleTypes = styled.div<IColumnStyleProps>``;
-const SColumn = styled(SColumnStyleTypes)`
+const SColumn = styled.div<IColumnStyleProps>`
   position: relative;
   width: 100%;
   height: ${({ spanHeight }) => (spanHeight ? "100%" : "auto")};
@@ -28,12 +27,7 @@ const SColumn = styled(SColumnStyleTypes)`
 const Column = (props: IColumnProps) => {
   const { children, spanHeight, maxWidth, center } = props;
   return (
-    <SColumn
-      spanHeight={spanHeight}
-      maxWidth={maxWidth}
-      center={center}
-      {...props}
-    >
+    <SColumn {...props} spanHeight={spanHeight} maxWidth={maxWidth} center={center}>
       {children}
     </SColumn>
   );
@@ -43,13 +37,13 @@ Column.propTypes = {
   children: PropTypes.node.isRequired,
   spanHeight: PropTypes.bool,
   maxWidth: PropTypes.number,
-  center: PropTypes.bool
+  center: PropTypes.bool,
 };
 
 Column.defaultProps = {
   spanHeight: false,
   maxWidth: 600,
-  center: false
+  center: false,
 };
 
 export default Column;

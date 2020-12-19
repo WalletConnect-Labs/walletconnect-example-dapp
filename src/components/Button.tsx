@@ -6,7 +6,7 @@ import { colors, fonts, shadows, transitions } from "../styles";
 interface IButtonStyleProps {
   fetching: boolean;
   outline: boolean;
-  type: string;
+  type: "button" | "submit" | "reset";
   color: string;
   disabled: boolean;
   icon: any;
@@ -41,19 +41,15 @@ const SHoverLayer = styled.div`
   visibility: hidden;
 `;
 
-const SButtonStyleTypes = styled.button<IButtonStyleProps>``;
-const SButton = styled(SButtonStyleTypes)`
+const SButton = styled.button<IButtonStyleProps>`
   transition: ${transitions.button};
   position: relative;
   border: none;
   border-style: none;
   box-sizing: border-box;
-  background-color: ${({ outline, color }) =>
-    outline ? "transparent" : `rgb(${colors[color]})`};
-  border: ${({ outline, color }) =>
-    outline ? `1px solid rgb(${colors[color]})` : "none"};
-  color: ${({ outline, color }) =>
-    outline ? `rgb(${colors[color]})` : `rgb(${colors.white})`};
+  background-color: ${({ outline, color }) => (outline ? "transparent" : `rgb(${colors[color]})`)};
+  border: ${({ outline, color }) => (outline ? `1px solid rgb(${colors[color]})` : "none")};
+  color: ${({ outline, color }) => (outline ? `rgb(${colors[color]})` : `rgb(${colors.white})`)};
   box-shadow: ${({ outline }) => (outline ? "none" : `${shadows.soft}`)};
   border-radius: 8px;
   font-size: ${fonts.size.medium};
@@ -72,11 +68,7 @@ const SButton = styled(SButtonStyleTypes)`
     &:hover {
       transform: ${({ disabled }) => (!disabled ? "translateY(-1px)" : "none")};
       box-shadow: ${({ disabled, outline }) =>
-        !disabled
-          ? outline
-            ? "none"
-            : `${shadows.hover}`
-          : `${shadows.soft}`};
+        !disabled ? (outline ? "none" : `${shadows.hover}`) : `${shadows.soft}`};
     }
 
     &:hover ${SHoverLayer} {
@@ -109,13 +101,13 @@ const SButton = styled(SButtonStyleTypes)`
 
 const Button = (props: IButtonProps) => (
   <SButton
+    {...props}
     type={props.type}
     outline={props.outline}
     color={props.color}
     disabled={props.disabled}
     icon={props.icon}
     left={props.left}
-    {...props}
   >
     <SHoverLayer />
     <SIcon />
@@ -130,7 +122,7 @@ Button.defaultProps = {
   color: "lightBlue",
   disabled: false,
   icon: null,
-  left: false
+  left: false,
 };
 
 export default Button;

@@ -2,8 +2,8 @@ import * as React from "react";
 import styled from "styled-components";
 import * as PropTypes from "prop-types";
 import Blockie from "./Blockie";
-import { ellipseAddress } from "../helpers/utilities";
-import banner from "../assets/walletconnect-banner.png";
+import Banner from "./Banner";
+import { ellipseAddress, getChainData } from "../helpers/utilities";
 import { transitions } from "../styles";
 
 const SHeader = styled.div`
@@ -17,20 +17,6 @@ const SHeader = styled.div`
   padding: 0 16px;
 `;
 
-const SBannerWrapper = styled.div`
-  display: flex;
-  align-items: center;
-  position: relative;
-`;
-
-const SBanner = styled.div`
-  width: 275px;
-  height: 45px;
-  background: url(${banner}) no-repeat;
-  background-size: cover;
-  background-position: center;
-`;
-
 const SActiveAccount = styled.div`
   display: flex;
   align-items: center;
@@ -38,15 +24,47 @@ const SActiveAccount = styled.div`
   font-weight: 500;
 `;
 
-const SDisconnect = styled.div`
+const SActiveChain = styled(SActiveAccount as any)`
+  flex-direction: column;
+  text-align: left;
+  align-items: flex-start;
+  & p {
+    font-size: 0.8em;
+    margin: 0;
+    padding: 0;
+  }
+  & p:nth-child(2) {
+    font-weight: bold;
+  }
+`;
+
+const SBlockie = styled(Blockie as any)`
+  margin-right: 10px;
+`;
+
+interface IHeaderStyle {
+  connected: boolean;
+}
+
+const SAddress = styled.p<IHeaderStyle>`
+  transition: ${transitions.base};
+  font-weight: bold;
+  margin: ${({ connected }) => (connected ? "-2px auto 0.7em" : "0")};
+`;
+
+const SDisconnect = styled.div<IHeaderStyle>`
   transition: ${transitions.button};
   font-size: 12px;
   font-family: monospace;
   position: absolute;
   right: 0;
-  top: 30px;
+  top: 20px;
   opacity: 0.7;
   cursor: pointer;
+
+  opacity: ${({ connected }) => (connected ? 1 : 0)};
+  visibility: ${({ connected }) => (connected ? "visible" : "hidden")};
+  pointer-events: ${({ connected }) => (connected ? "auto" : "none")};
 
   &:hover {
     transform: translateY(-1px);
@@ -54,27 +72,33 @@ const SDisconnect = styled.div`
   }
 `;
 
-const SBockieWrapper = styled.div`
-  margin-right: 10px;
-  & canvas {
-    border-radius: 3px;
-  }
-`;
+interface IHeaderProps {
+  killSession: () => void;
+  connected: boolean;
+  address: string;
+  chainId: number;
+}
 
-const Header = (props: any) => {
-  const { killSession, address } = props;
+const Header = (props: IHeaderProps) => {
+  const { connected, address, chainId, killSession } = props;
+  const activeChain = chainId ? getChainData(chainId).name : null;
   return (
     <SHeader {...props}>
-      <SBannerWrapper>
-        <SBanner />
-      </SBannerWrapper>
+      {connected && activeChain ? (
+        <SActiveChain>
+          <p>{`Connected to`}</p>
+          <p>{activeChain}</p>
+        </SActiveChain>
+      ) : (
+        <Banner />
+      )}
       {address && (
         <SActiveAccount>
-          <SBockieWrapper>
-            <Blockie address={address} />
-          </SBockieWrapper>
-          <p>{ellipseAddress(address)}</p>
-          <SDisconnect onClick={killSession}>{"Disconnect"}</SDisconnect>
+          <SBlockie address={address} />
+          <SAddress connected={connected}>{ellipseAddress(address)}</SAddress>
+          <SDisconnect connected={connected} onClick={killSession}>
+            {"Disconnect"}
+          </SDisconnect>
         </SActiveAccount>
       )}
     </SHeader>
@@ -83,7 +107,7 @@ const Header = (props: any) => {
 
 Header.propTypes = {
   killSession: PropTypes.func.isRequired,
-  address: PropTypes.string
+  address: PropTypes.string,
 };
 
 export default Header;
