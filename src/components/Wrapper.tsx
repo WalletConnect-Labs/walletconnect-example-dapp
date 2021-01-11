@@ -15,8 +15,7 @@ interface IWrapperStyleProps {
   center: boolean;
 }
 
-const SWrapperStyleTypes = styled.div<IWrapperStyleProps>``;
-const SWrapper = styled(SWrapperStyleTypes)`
+const SWrapper = styled.div<IWrapperStyleProps>`
   will-change: transform, opacity;
   animation: ${fadeIn} 0.7s ease 0s normal 1;
   min-height: 200px;
@@ -33,7 +32,7 @@ interface IWrapperProps extends IWrapperStyleProps {
 const Wrapper = (props: IWrapperProps) => {
   const { children, center } = props;
   return (
-    <SWrapper center={center} {...props}>
+    <SWrapper {...props} center={center}>
       {children}
     </SWrapper>
   );
@@ -41,11 +40,11 @@ const Wrapper = (props: IWrapperProps) => {
 
 Wrapper.propTypes = {
   children: PropTypes.node.isRequired,
-  center: PropTypes.bool
+  center: PropTypes.bool,
 };
 
 Wrapper.defaultProps = {
-  center: false
+  center: false,
 };
 
 export default Wrapper;

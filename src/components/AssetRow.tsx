@@ -3,7 +3,8 @@ import styled from "styled-components";
 import Icon from "./Icon";
 import ERC20Icon from "./ERC20Icon";
 import eth from "../assets/eth.svg";
-import { handleSignificantDecimals } from "../helpers/bignumber";
+import xdai from "../assets/xdai.png";
+import { handleSignificantDecimals, convertAmountFromRawNumber } from "../helpers/bignumber";
 
 const SAssetRow = styled.div`
   width: 100%;
@@ -27,19 +28,27 @@ const SAssetBalance = styled.div`
 
 const AssetRow = (props: any) => {
   const { asset } = props;
+  const nativeCurrencyIcon =
+    asset.symbol && asset.symbol.toLowerCase() === "eth"
+      ? eth
+      : asset.symbol && asset.symbol.toLowerCase() === "xdai"
+      ? xdai
+      : null;
   return (
     <SAssetRow {...props}>
       <SAssetRowLeft>
-        {asset.symbol && asset.symbol.toLowerCase() === "eth" ? (
-          <Icon src={eth} />
+        {nativeCurrencyIcon ? (
+          <Icon src={nativeCurrencyIcon} />
         ) : (
-          <ERC20Icon contractAddress={asset.contractAddress} />
+          <ERC20Icon contractAddress={asset.contractAddress.toLowerCase()} />
         )}
         <SAssetName>{asset.name}</SAssetName>
       </SAssetRowLeft>
       <SAssetRowRight>
         <SAssetBalance>
-          {`${handleSignificantDecimals(asset.balance, 8)} ${asset.symbol}`}
+          {`${handleSignificantDecimals(convertAmountFromRawNumber(asset.balance), 8)} ${
+            asset.symbol
+          }`}
         </SAssetBalance>
       </SAssetRowRight>
     </SAssetRow>

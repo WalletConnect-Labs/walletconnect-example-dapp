@@ -16,9 +16,11 @@
     "noImplicitAny": true,
     "importHelpers": true,
     "strictNullChecks": true,
+    "allowSyntheticDefaultImports": true,
     "suppressImplicitAnyIndexErrors": true,
     "noUnusedLocals": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["react", "jest"]
   },
   "exclude": [
     "node_modules",

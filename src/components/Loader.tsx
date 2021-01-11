@@ -29,8 +29,7 @@ interface ILoaderProps extends ILoaderStyleProps {
   color: string;
 }
 
-const SLoaderStyleTypes = styled.svg<ILoaderStyleProps>``;
-const SLoader = styled(SLoaderStyleTypes)`
+const SLoader = styled.svg<ILoaderStyleProps>`
   width: ${({ size }) => `${size}px`};
   height: ${({ size }) => `${size}px`};
   animation: ${load} 1s infinite cubic-bezier(0.25, 0, 0.75, 1);
@@ -49,15 +48,7 @@ const Loader = (props: ILoaderProps) => {
           fill={rgb}
           fillRule="nonzero"
         />
-        <rect
-          id="Rectangle"
-          fill={rgb}
-          x="44"
-          y="44.34375"
-          width="98"
-          height="98"
-          rx="35"
-        />
+        <rect id="Rectangle" fill={rgb} x="44" y="44.34375" width="98" height="98" rx="35" />
       </g>
     </SLoader>
   );
@@ -65,12 +56,12 @@ const Loader = (props: ILoaderProps) => {
 
 Loader.propTypes = {
   size: PropTypes.number,
-  color: PropTypes.string
+  color: PropTypes.string,
 };
 
 Loader.defaultProps = {
   size: 40,
-  color: "lightBlue"
+  color: "lightBlue",
 };
 
 export default Loader;

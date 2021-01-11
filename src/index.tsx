@@ -12,7 +12,6 @@ declare global {
   // tslint:disable-next-line
   interface Window {
     blockies: any;
-    walletConnector: any;
   }
 }
 
@@ -21,5 +20,5 @@ ReactDOM.render(
     <GlobalStyle />
     <App />
   </>,
-  document.getElementById("root")
+  document.getElementById("root"),
 );
