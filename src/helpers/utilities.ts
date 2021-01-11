@@ -142,6 +142,7 @@ export function getChainData(chainId: number): IChainData {
 //   return ethUtil.bufferToHex(hash);
 // }
 
+
 export function encodeTypedDataMessage(msg: string): string {
   const useV4 = true;
   const data = TypedDataUtils.sanitizeData(JSON.parse(msg));
@@ -159,6 +160,7 @@ export function hashTypedDataMessage(msg: string): string {
   const hash = ethUtil.keccak256(buf);
   return ethUtil.bufferToHex(hash);
 }
+
 
 export function recoverPublicKey(sig: string, hash: string): string {
   const params = ethUtil.fromRpcSig(sig);
@@ -179,6 +181,7 @@ export function recoverTypedMessage(sig: string, msg: string): string {
   return signer;
 }
 
+
 export async function verifySignature(
   address: string,
   sig: string,
@@ -190,6 +193,7 @@ export async function verifySignature(
   const bytecode = await provider.getCode(address);
   if (!bytecode || bytecode === "0x" || bytecode === "0x0" || bytecode === "0x00") {
     const signer = recoverPublicKey(sig, hash);
+
     return signer.toLowerCase() === address.toLowerCase();
   } else {
     return eip1271.isValidSignature(address, sig, hash, provider);

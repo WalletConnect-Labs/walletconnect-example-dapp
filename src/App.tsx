@@ -24,6 +24,7 @@ import AccountAssets from "./components/AccountAssets";
 // import { eip712 } from "./helpers/eip712";
 import { ConnectionTypes, SessionTypes } from "@walletconnect/types";
 
+
 const SLayout = styled.div`
   position: relative;
   width: 100%;
@@ -191,6 +192,7 @@ class App extends React.Component<any, any> {
     this.createSession();
   };
 
+
   public createSession = async () => {
     const { client } = this.state;
     if (client) {
@@ -219,12 +221,24 @@ class App extends React.Component<any, any> {
     if (client) {
       // fix: send a reason
       client.disconnect({ reason: "", topic: session?.topic || "" });
+
     }
     this.resetApp();
   };
 
   public resetApp = async () => {
     await this.setState({ ...INITIAL_STATE });
+  };
+
+  public onDisconnect = async () => {
+    this.resetApp();
+  };
+
+  public onSessionUpdate = async (accounts: string[], chainId: number) => {
+    const address = accounts[0];
+    await this.setState({ chainId, accounts, address });
+    await this.getAccountAssets();
+
   };
 
   public onDisconnect = async () => {
