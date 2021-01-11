@@ -23,6 +23,7 @@ import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
 // import { eip712 } from "./helpers/eip712";
 import { PairingTypes, SessionTypes } from "@walletconnect/types";
+import { DEFAULT_CHAIN_ID, DEFAULT_RELAY_PROVIDER } from "./constants";
 
 const SLayout = styled.div`
   position: relative;
@@ -161,16 +162,16 @@ class App extends React.Component<any, any> {
   public state: IAppState = {
     ...INITIAL_STATE,
   };
+  public componentDidMount() {
+    this.init();
+  }
 
-  public walletConnectInit = async () => {
-    // bridge url
-    const bridge = "wss://staging.walletconnect.org";
-
+  public init = async () => {
     const client = await WalletConnectClient.init({
-      relayProvider: bridge,
+      relayProvider: DEFAULT_RELAY_PROVIDER,
     });
 
-    await this.setState({ client });
+    this.setState({ client });
     await this.subscribeToEvents();
   };
 
@@ -182,17 +183,16 @@ class App extends React.Component<any, any> {
     this.state.client.on(
       CLIENT_EVENTS.pairing.proposal,
       async (proposal: PairingTypes.Proposal) => {
-        const { uri } = await proposal.signal.params;
+        const { uri } = proposal.signal.params;
         this.setState({ uri });
         QRCodeModal.open(uri, () => {
           console.log("Modal callback");
         });
       },
     );
-    this.createSession();
   };
 
-  public createSession = async () => {
+  public connect = async () => {
     if (typeof this.state.client !== "undefined") {
       const session = await this.state.client.connect({
         metadata: {
@@ -203,7 +203,7 @@ class App extends React.Component<any, any> {
         },
         permissions: {
           blockchain: {
-            chainIds: ["eip155:1"],
+            chainIds: [DEFAULT_CHAIN_ID],
           },
           jsonrpc: {
             methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData"],
@@ -223,7 +223,7 @@ class App extends React.Component<any, any> {
   };
 
   public resetApp = async () => {
-    await this.setState({ ...INITIAL_STATE });
+    this.setState({ ...INITIAL_STATE });
   };
 
   public onDisconnect = async () => {
@@ -232,7 +232,7 @@ class App extends React.Component<any, any> {
 
   public onSessionUpdate = async (accounts: string[], chainId: number) => {
     const address = accounts[0];
-    await this.setState({ chainId, accounts, address });
+    this.setState({ chainId, accounts, address });
     await this.getAccountAssets();
   };
 
@@ -243,10 +243,10 @@ class App extends React.Component<any, any> {
       // get account balances
       const assets = await apiGetAccountAssets(address, chainId);
 
-      await this.setState({ fetching: false, assets });
+      this.setState({ fetching: false, assets });
     } catch (error) {
       console.error(error);
-      await this.setState({ fetching: false });
+      this.setState({ fetching: false });
     }
   };
 
@@ -307,7 +307,7 @@ class App extends React.Component<any, any> {
                   <span>{`v${process.env.REACT_APP_VERSION}`}</span>
                 </h3>
                 <SButtonContainer>
-                  <SConnectButton left onClick={this.walletConnectInit} fetching={fetching}>
+                  <SConnectButton left onClick={this.connect} fetching={fetching}>
                     {"Connect to WalletConnect"}
                   </SConnectButton>
                 </SButtonContainer>
