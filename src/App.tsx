@@ -22,8 +22,7 @@ import { IAssetData } from "./helpers/types";
 import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
 // import { eip712 } from "./helpers/eip712";
-import { ConnectionTypes, SessionTypes } from "@walletconnect/types";
-
+import { PairingTypes, SessionTypes } from "@walletconnect/types";
 
 const SLayout = styled.div`
   position: relative;
@@ -129,8 +128,8 @@ const STestButton = styled(Button as any)`
 `;
 
 interface IAppState {
-  client: WalletConnectClient | null;
-  session: SessionTypes.Settled | null;
+  client: WalletConnectClient | undefined;
+  session: SessionTypes.Settled | undefined;
   fetching: boolean;
   connected: boolean;
   chainId: number;
@@ -139,13 +138,13 @@ interface IAppState {
   uri: string;
   accounts: string[];
   address: string;
-  result: any | null;
+  result: any | undefined;
   assets: IAssetData[];
 }
 
 const INITIAL_STATE: IAppState = {
-  client: null,
-  session: null,
+  client: undefined,
+  session: undefined,
   fetching: false,
   connected: false,
   chainId: 1,
@@ -154,7 +153,7 @@ const INITIAL_STATE: IAppState = {
   uri: "",
   accounts: [],
   address: "",
-  result: null,
+  result: undefined,
   assets: [],
 };
 
@@ -176,31 +175,30 @@ class App extends React.Component<any, any> {
   };
 
   public subscribeToEvents = async () => {
-    const { client } = this.state;
-    if (!client) {
+    if (typeof this.state.client === "undefined") {
       return;
     }
 
-    client.on(CLIENT_EVENTS.connection.proposal, async (proposal: ConnectionTypes.Proposal) => {
-      const { uri } = await proposal.signal.params;
-      this.setState({ uri });
-      QRCodeModal.open(uri, () => {
-        console.log("Modal callback");
-      });
-    });
-    this.setState({ client });
+    this.state.client.on(
+      CLIENT_EVENTS.pairing.proposal,
+      async (proposal: PairingTypes.Proposal) => {
+        const { uri } = await proposal.signal.params;
+        this.setState({ uri });
+        QRCodeModal.open(uri, () => {
+          console.log("Modal callback");
+        });
+      },
+    );
     this.createSession();
   };
 
-
   public createSession = async () => {
-    const { client } = this.state;
-    if (client) {
-      const session = await client.connect({
+    if (typeof this.state.client !== "undefined") {
+      const session = await this.state.client.connect({
         metadata: {
           name: "Example Dapp",
           description: "Example Dapp",
-          url: "#",
+          url: "https://walletconnect.org/",
           icons: ["https://walletconnect.org/walletconnect-logo.png"],
         },
         permissions: {
@@ -216,29 +214,16 @@ class App extends React.Component<any, any> {
     }
   };
 
-  public killSession = async () => {
-    const { client, session } = this.state;
-    if (client) {
+  public disconnect = async () => {
+    if (typeof this.state.client !== "undefined") {
       // fix: send a reason
-      client.disconnect({ reason: "", topic: session?.topic || "" });
-
+      this.state.client.disconnect({ reason: "", topic: this.state.session?.topic || "" });
     }
     this.resetApp();
   };
 
   public resetApp = async () => {
     await this.setState({ ...INITIAL_STATE });
-  };
-
-  public onDisconnect = async () => {
-    this.resetApp();
-  };
-
-  public onSessionUpdate = async (accounts: string[], chainId: number) => {
-    const address = accounts[0];
-    await this.setState({ chainId, accounts, address });
-    await this.getAccountAssets();
-
   };
 
   public onDisconnect = async () => {
@@ -258,7 +243,7 @@ class App extends React.Component<any, any> {
       // get account balances
       const assets = await apiGetAccountAssets(address, chainId);
 
-      await this.setState({ fetching: false, address, assets });
+      await this.setState({ fetching: false, assets });
     } catch (error) {
       console.error(error);
       await this.setState({ fetching: false });
@@ -268,14 +253,12 @@ class App extends React.Component<any, any> {
   public toggleModal = () => this.setState({ showModal: !this.state.showModal });
 
   public testSendTransaction = async () => {
-    const { client, session } = this.state;
-    if (client && session) {
-      const result = await client.request({
-        topic: session.topic,
+    // const { client, session } = this.state;
+    if (typeof this.state.client !== "undefined" && typeof this.state.session !== "undefined") {
+      const result = await this.state.client.request({
+        topic: this.state.session.topic,
         chainId: "eip155:1",
         request: {
-          id: 1,
-          jsonrpc: "2.0",
           method: "personal_sign",
           params: [
             "0x1d85568eEAbad713fBB5293B45ea066e552A90De",
@@ -313,7 +296,7 @@ class App extends React.Component<any, any> {
             connected={connected}
             address={address}
             chainId={chainId}
-            killSession={this.killSession}
+            disconnect={this.disconnect}
           />
           <SContent>
             {!address && !assets.length ? (
