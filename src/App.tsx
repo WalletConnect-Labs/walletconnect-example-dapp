@@ -253,6 +253,10 @@ class App extends React.Component<any, any> {
   public toggleModal = () => this.setState({ showModal: !this.state.showModal });
 
   public testSendTransaction = async () => {
+    console.log("Send Transaction");
+  };
+
+  public testSignPersonalMessage = async () => {
     // const { client, session } = this.state;
     if (typeof this.state.client !== "undefined" && typeof this.state.session !== "undefined") {
       const result = await this.state.client.request({
@@ -268,10 +272,6 @@ class App extends React.Component<any, any> {
       });
       console.log(result);
     }
-  };
-
-  public testSignPersonalMessage = async () => {
-    console.log("Sign personal message");
   };
 
   public testSignTypedData = async () => {
