@@ -1,5 +1,5 @@
 import { providers } from "ethers";
-import { convertUtf8ToHex } from "@walletconnect/utils";
+// import { convertUtf8ToHex } from "@walletconnect/utils";
 import { TypedDataUtils } from "eth-sig-util";
 import * as ethUtil from "ethereumjs-util";
 import { IChainData } from "./types";
@@ -126,21 +126,22 @@ export function getChainData(chainId: number): IChainData {
   return chainData;
 }
 
-export function encodePersonalMessage(msg: string): string {
-  const data = ethUtil.toBuffer(convertUtf8ToHex(msg));
-  const buf = Buffer.concat([
-    Buffer.from("\u0019Ethereum Signed Message:\n" + data.length.toString(), "utf8"),
-    data,
-  ]);
-  return ethUtil.bufferToHex(buf);
-}
+// export function encodePersonalMessage(msg: string): string {
+//   const data = ethUtil.toBuffer(convertUtf8ToHex(msg));
+//   const buf = Buffer.concat([
+//     Buffer.from("\u0019Ethereum Signed Message:\n" + data.length.toString(), "utf8"),
+//     data,
+//   ]);
+//   return ethUtil.bufferToHex(buf);
+// }
 
-export function hashPersonalMessage(msg: string): string {
-  const data = encodePersonalMessage(msg);
-  const buf = ethUtil.toBuffer(data);
-  const hash = ethUtil.keccak256(buf);
-  return ethUtil.bufferToHex(hash);
-}
+// export function hashPersonalMessage(msg: string): string {
+//   const data = encodePersonalMessage(msg);
+//   const buf = ethUtil.toBuffer(data);
+//   const hash = ethUtil.keccak256(buf);
+//   return ethUtil.bufferToHex(hash);
+// }
+
 
 export function encodeTypedDataMessage(msg: string): string {
   const useV4 = true;
@@ -160,24 +161,26 @@ export function hashTypedDataMessage(msg: string): string {
   return ethUtil.bufferToHex(hash);
 }
 
-export function recoverAddress(sig: string, hash: string): string {
+
+export function recoverPublicKey(sig: string, hash: string): string {
   const params = ethUtil.fromRpcSig(sig);
   const result = ethUtil.ecrecover(ethUtil.toBuffer(hash), params.v, params.r, params.s);
   const signer = ethUtil.bufferToHex(ethUtil.publicToAddress(result));
   return signer;
 }
 
-export function recoverPersonalSignature(sig: string, msg: string): string {
-  const hash = hashPersonalMessage(msg);
-  const signer = recoverAddress(sig, hash);
-  return signer;
-}
+// export function recoverPersonalSignature(sig: string, msg: string): string {
+//   const hash = hashPersonalMessage(msg);
+//   const signer = recoverPublicKey(sig, hash);
+//   return signer;
+// }
 
 export function recoverTypedMessage(sig: string, msg: string): string {
   const hash = hashTypedDataMessage(msg);
-  const signer = recoverAddress(sig, hash);
+  const signer = recoverPublicKey(sig, hash);
   return signer;
 }
+
 
 export async function verifySignature(
   address: string,
@@ -189,7 +192,8 @@ export async function verifySignature(
   const provider = new providers.JsonRpcProvider(rpcUrl);
   const bytecode = await provider.getCode(address);
   if (!bytecode || bytecode === "0x" || bytecode === "0x0" || bytecode === "0x00") {
-    const signer = recoverAddress(sig, hash);
+    const signer = recoverPublicKey(sig, hash);
+
     return signer.toLowerCase() === address.toLowerCase();
   } else {
     return eip1271.isValidSignature(address, sig, hash, provider);

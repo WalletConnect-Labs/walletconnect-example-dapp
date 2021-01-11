@@ -1,28 +1,29 @@
 import * as React from "react";
 import styled from "styled-components";
-import WalletConnect from "@walletconnect/client";
 import QRCodeModal from "@walletconnect/qrcode-modal";
-import { convertUtf8ToHex } from "@walletconnect/utils";
-import { IInternalEvent } from "@walletconnect/types";
 import Button from "./components/Button";
+import WalletConnectClient, { CLIENT_EVENTS } from "@walletconnect/client";
 import Column from "./components/Column";
 import Wrapper from "./components/Wrapper";
 import Modal from "./components/Modal";
 import Header from "./components/Header";
 import Loader from "./components/Loader";
 import { fonts } from "./styles";
-import { apiGetAccountAssets, apiGetGasPrices, apiGetAccountNonce } from "./helpers/api";
-import {
-  sanitizeHex,
-  verifySignature,
-  hashTypedDataMessage,
-  hashPersonalMessage,
-} from "./helpers/utilities";
-import { convertAmountToRawNumber, convertStringToHex } from "./helpers/bignumber";
+import { apiGetAccountAssets } from "./helpers/api";
+// import { apiGetAccountAssets, apiGetGasPrices, apiGetAccountNonce } from "./helpers/api";
+// import {
+//   sanitizeHex,
+//   verifySignature,
+//   hashTypedDataMessage,
+//   hashPersonalMessage,
+// } from "./helpers/utilities";
+// import { convertAmountToRawNumber, convertStringToHex } from "./helpers/bignumber";
 import { IAssetData } from "./helpers/types";
 import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
-import { eip712 } from "./helpers/eip712";
+// import { eip712 } from "./helpers/eip712";
+import { ConnectionTypes, SessionTypes } from "@walletconnect/types";
+
 
 const SLayout = styled.div`
   position: relative;
@@ -128,7 +129,8 @@ const STestButton = styled(Button as any)`
 `;
 
 interface IAppState {
-  connector: WalletConnect | null;
+  client: WalletConnectClient | null;
+  session: SessionTypes.Settled | null;
   fetching: boolean;
   connected: boolean;
   chainId: number;
@@ -142,7 +144,8 @@ interface IAppState {
 }
 
 const INITIAL_STATE: IAppState = {
-  connector: null,
+  client: null,
+  session: null,
   fetching: false,
   connected: false,
   chainId: 1,
@@ -162,79 +165,63 @@ class App extends React.Component<any, any> {
 
   public walletConnectInit = async () => {
     // bridge url
-    const bridge = "https://bridge.walletconnect.org";
+    const bridge = "wss://staging.walletconnect.org";
 
-    // create new connector
-    const connector = new WalletConnect({ bridge, qrcodeModal: QRCodeModal });
+    const client = await WalletConnectClient.init({
+      relayProvider: bridge,
+    });
 
-    await this.setState({ connector });
-
-    // check if already connected
-    if (!connector.connected) {
-      // create new session
-      await connector.createSession();
-    }
-
-    // subscribe to events
+    await this.setState({ client });
     await this.subscribeToEvents();
   };
-  public subscribeToEvents = () => {
-    const { connector } = this.state;
 
-    if (!connector) {
+  public subscribeToEvents = async () => {
+    const { client } = this.state;
+    if (!client) {
       return;
     }
 
-    connector.on("session_update", async (error, payload) => {
-      console.log(`connector.on("session_update")`);
-
-      if (error) {
-        throw error;
-      }
-
-      const { chainId, accounts } = payload.params[0];
-      this.onSessionUpdate(accounts, chainId);
-    });
-
-    connector.on("connect", (error, payload) => {
-      console.log(`connector.on("connect")`);
-
-      if (error) {
-        throw error;
-      }
-
-      this.onConnect(payload);
-    });
-
-    connector.on("disconnect", (error, payload) => {
-      console.log(`connector.on("disconnect")`);
-
-      if (error) {
-        throw error;
-      }
-
-      this.onDisconnect();
-    });
-
-    if (connector.connected) {
-      const { chainId, accounts } = connector;
-      const address = accounts[0];
-      this.setState({
-        connected: true,
-        chainId,
-        accounts,
-        address,
+    client.on(CLIENT_EVENTS.connection.proposal, async (proposal: ConnectionTypes.Proposal) => {
+      const { uri } = await proposal.signal.params;
+      this.setState({ uri });
+      QRCodeModal.open(uri, () => {
+        console.log("Modal callback");
       });
-      this.onSessionUpdate(accounts, chainId);
-    }
+    });
+    this.setState({ client });
+    this.createSession();
+  };
 
-    this.setState({ connector });
+
+  public createSession = async () => {
+    const { client } = this.state;
+    if (client) {
+      const session = await client.connect({
+        metadata: {
+          name: "Example Dapp",
+          description: "Example Dapp",
+          url: "#",
+          icons: ["https://walletconnect.org/walletconnect-logo.png"],
+        },
+        permissions: {
+          blockchain: {
+            chainIds: ["eip155:1"],
+          },
+          jsonrpc: {
+            methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData"],
+          },
+        },
+      });
+      this.setState({ session });
+    }
   };
 
   public killSession = async () => {
-    const { connector } = this.state;
-    if (connector) {
-      connector.killSession();
+    const { client, session } = this.state;
+    if (client) {
+      // fix: send a reason
+      client.disconnect({ reason: "", topic: session?.topic || "" });
+
     }
     this.resetApp();
   };
@@ -243,16 +230,15 @@ class App extends React.Component<any, any> {
     await this.setState({ ...INITIAL_STATE });
   };
 
-  public onConnect = async (payload: IInternalEvent) => {
-    const { chainId, accounts } = payload.params[0];
+  public onDisconnect = async () => {
+    this.resetApp();
+  };
+
+  public onSessionUpdate = async (accounts: string[], chainId: number) => {
     const address = accounts[0];
-    await this.setState({
-      connected: true,
-      chainId,
-      accounts,
-      address,
-    });
-    this.getAccountAssets();
+    await this.setState({ chainId, accounts, address });
+    await this.getAccountAssets();
+
   };
 
   public onDisconnect = async () => {
@@ -282,174 +268,31 @@ class App extends React.Component<any, any> {
   public toggleModal = () => this.setState({ showModal: !this.state.showModal });
 
   public testSendTransaction = async () => {
-    const { connector, address, chainId } = this.state;
-
-    if (!connector) {
-      return;
-    }
-
-    // from
-    const from = address;
-
-    // to
-    const to = address;
-
-    // nonce
-    const _nonce = await apiGetAccountNonce(address, chainId);
-    const nonce = sanitizeHex(convertStringToHex(_nonce));
-
-    // gasPrice
-    const gasPrices = await apiGetGasPrices();
-    const _gasPrice = gasPrices.slow.price;
-    const gasPrice = sanitizeHex(convertStringToHex(convertAmountToRawNumber(_gasPrice, 9)));
-
-    // gasLimit
-    const _gasLimit = 21000;
-    const gasLimit = sanitizeHex(convertStringToHex(_gasLimit));
-
-    // value
-    const _value = 0;
-    const value = sanitizeHex(convertStringToHex(_value));
-
-    // data
-    const data = "0x";
-
-    // test transaction
-    const tx = {
-      from,
-      to,
-      nonce,
-      gasPrice,
-      gasLimit,
-      value,
-      data,
-    };
-
-    try {
-      // open modal
-      this.toggleModal();
-
-      // toggle pending request indicator
-      this.setState({ pendingRequest: true });
-
-      // send transaction
-      const result = await connector.sendTransaction(tx);
-
-      // format displayed result
-      const formattedResult = {
-        method: "eth_sendTransaction",
-        txHash: result,
-        from: address,
-        to: address,
-        value: "0 ETH",
-      };
-
-      // display result
-      this.setState({
-        connector,
-        pendingRequest: false,
-        result: formattedResult || null,
+    const { client, session } = this.state;
+    if (client && session) {
+      const result = await client.request({
+        topic: session.topic,
+        chainId: "eip155:1",
+        request: {
+          id: 1,
+          jsonrpc: "2.0",
+          method: "personal_sign",
+          params: [
+            "0x1d85568eEAbad713fBB5293B45ea066e552A90De",
+            "0x7468697320697320612074657374206d65737361676520746f206265207369676e6564",
+          ],
+        },
       });
-    } catch (error) {
-      console.error(error);
-      this.setState({ connector, pendingRequest: false, result: null });
+      console.log(result);
     }
   };
 
   public testSignPersonalMessage = async () => {
-    const { connector, address, chainId } = this.state;
-
-    if (!connector) {
-      return;
-    }
-
-    // test message
-    const message = "My email is john@doe.com - 1537836206101";
-
-    // encode message (hex)
-    const hexMsg = convertUtf8ToHex(message);
-
-    // personal_sign params
-    const msgParams = [hexMsg, address];
-
-    try {
-      // open modal
-      this.toggleModal();
-
-      // toggle pending request indicator
-      this.setState({ pendingRequest: true });
-
-      // send message
-      const result = await connector.signPersonalMessage(msgParams);
-
-      // verify signature
-      const hash = hashPersonalMessage(message);
-      const valid = await verifySignature(address, result, hash, chainId);
-
-      // format displayed result
-      const formattedResult = {
-        method: "personal_sign",
-        address,
-        valid,
-        result,
-      };
-
-      // display result
-      this.setState({
-        connector,
-        pendingRequest: false,
-        result: formattedResult || null,
-      });
-    } catch (error) {
-      console.error(error);
-      this.setState({ connector, pendingRequest: false, result: null });
-    }
+    console.log("Sign personal message");
   };
 
   public testSignTypedData = async () => {
-    const { connector, address, chainId } = this.state;
-
-    if (!connector) {
-      return;
-    }
-
-    const message = JSON.stringify(eip712.example);
-
-    // eth_signTypedData params
-    const msgParams = [address, message];
-
-    try {
-      // open modal
-      this.toggleModal();
-
-      // toggle pending request indicator
-      this.setState({ pendingRequest: true });
-
-      // sign typed data
-      const result = await connector.signTypedData(msgParams);
-
-      // verify signature
-      const hash = hashTypedDataMessage(message);
-      const valid = await verifySignature(address, result, hash, chainId);
-
-      // format displayed result
-      const formattedResult = {
-        method: "eth_signTypedData",
-        address,
-        valid,
-        result,
-      };
-
-      // display result
-      this.setState({
-        connector,
-        pendingRequest: false,
-        result: formattedResult || null,
-      });
-    } catch (error) {
-      console.error(error);
-      this.setState({ connector, pendingRequest: false, result: null });
-    }
+    console.log("Sign typed data");
   };
 
   public render = () => {
