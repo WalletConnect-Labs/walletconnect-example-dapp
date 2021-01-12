@@ -21,22 +21,22 @@ const load = keyframes`
   }
 `;
 
-interface ILoaderStyleProps {
+interface LoaderStyleProps {
   size: number;
 }
 
-interface ILoaderProps extends ILoaderStyleProps {
+interface LoaderProps extends LoaderStyleProps {
   color: string;
 }
 
-const SLoader = styled.svg<ILoaderStyleProps>`
+const SLoader = styled.svg<LoaderStyleProps>`
   width: ${({ size }) => `${size}px`};
   height: ${({ size }) => `${size}px`};
   animation: ${load} 1s infinite cubic-bezier(0.25, 0, 0.75, 1);
   transform: translateZ(0);
 `;
 
-const Loader = (props: ILoaderProps) => {
+const Loader = (props: LoaderProps) => {
   const { size, color } = props;
   const rgb = `rgb(${colors[color]})`;
   return (

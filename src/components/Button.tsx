@@ -3,7 +3,7 @@ import styled from "styled-components";
 import Loader from "./Loader";
 import { colors, fonts, shadows, transitions } from "../styles";
 
-interface IButtonStyleProps {
+interface ButtonStyleProps {
   fetching: boolean;
   outline: boolean;
   type: "button" | "submit" | "reset";
@@ -13,7 +13,7 @@ interface IButtonStyleProps {
   left: boolean;
 }
 
-interface IButtonProps extends IButtonStyleProps {
+interface ButtonProps extends ButtonStyleProps {
   children: React.ReactNode;
   onClick?: any;
 }
@@ -41,7 +41,7 @@ const SHoverLayer = styled.div`
   visibility: hidden;
 `;
 
-const SButton = styled.button<IButtonStyleProps>`
+const SButton = styled.button<ButtonStyleProps>`
   transition: ${transitions.button};
   position: relative;
   border: none;
@@ -99,7 +99,7 @@ const SButton = styled.button<IButtonStyleProps>`
   }
 `;
 
-const Button = (props: IButtonProps) => (
+const Button = (props: ButtonProps) => (
   <SButton
     {...props}
     type={props.type}

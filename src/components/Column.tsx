@@ -2,17 +2,17 @@ import * as React from "react";
 import * as PropTypes from "prop-types";
 import styled from "styled-components";
 
-interface IColumnStyleProps {
+interface ColumnStyleProps {
   spanHeight: boolean;
   maxWidth: number;
   center: boolean;
 }
 
-interface IColumnProps extends IColumnStyleProps {
+interface ColumnProps extends ColumnStyleProps {
   children: React.ReactNode;
 }
 
-const SColumn = styled.div<IColumnStyleProps>`
+const SColumn = styled.div<ColumnStyleProps>`
   position: relative;
   width: 100%;
   height: ${({ spanHeight }) => (spanHeight ? "100%" : "auto")};
@@ -24,7 +24,7 @@ const SColumn = styled.div<IColumnStyleProps>`
   justify-content: ${({ center }) => (center ? "center" : "flex-start")};
 `;
 
-const Column = (props: IColumnProps) => {
+const Column = (props: ColumnProps) => {
   const { children, spanHeight, maxWidth, center } = props;
   return (
     <SColumn {...props} spanHeight={spanHeight} maxWidth={maxWidth} center={center}>

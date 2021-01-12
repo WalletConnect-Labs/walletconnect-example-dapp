@@ -2,7 +2,7 @@ import { providers } from "ethers";
 // import { convertUtf8ToHex } from "@walletconnect/utils";
 import { TypedDataUtils } from "eth-sig-util";
 import * as ethUtil from "ethereumjs-util";
-import { IChainData } from "./types";
+import { ChainData } from "./types";
 import { SUPPORTED_CHAINS } from "./chains";
 import { eip1271 } from "./eip1271";
 
@@ -101,7 +101,7 @@ export function isMobile(): boolean {
   return mobile;
 }
 
-export function getChainData(chainId: number): IChainData {
+export function getChainData(chainId: number): ChainData {
   const chainData = SUPPORTED_CHAINS.filter((chain: any) => chain.chain_id === chainId)[0];
 
   if (!chainData) {
@@ -142,7 +142,6 @@ export function getChainData(chainId: number): IChainData {
 //   return ethUtil.bufferToHex(hash);
 // }
 
-
 export function encodeTypedDataMessage(msg: string): string {
   const useV4 = true;
   const data = TypedDataUtils.sanitizeData(JSON.parse(msg));
@@ -161,8 +160,7 @@ export function hashTypedDataMessage(msg: string): string {
   return ethUtil.bufferToHex(hash);
 }
 
-
-export function recoverPublicKey(sig: string, hash: string): string {
+export function recoverAddress(sig: string, hash: string): string {
   const params = ethUtil.fromRpcSig(sig);
   const result = ethUtil.ecrecover(ethUtil.toBuffer(hash), params.v, params.r, params.s);
   const signer = ethUtil.bufferToHex(ethUtil.publicToAddress(result));
@@ -171,16 +169,15 @@ export function recoverPublicKey(sig: string, hash: string): string {
 
 // export function recoverPersonalSignature(sig: string, msg: string): string {
 //   const hash = hashPersonalMessage(msg);
-//   const signer = recoverPublicKey(sig, hash);
+//   const signer = recoverAddress(sig, hash);
 //   return signer;
 // }
 
 export function recoverTypedMessage(sig: string, msg: string): string {
   const hash = hashTypedDataMessage(msg);
-  const signer = recoverPublicKey(sig, hash);
+  const signer = recoverAddress(sig, hash);
   return signer;
 }
-
 
 export async function verifySignature(
   address: string,
@@ -192,7 +189,7 @@ export async function verifySignature(
   const provider = new providers.JsonRpcProvider(rpcUrl);
   const bytecode = await provider.getCode(address);
   if (!bytecode || bytecode === "0x" || bytecode === "0x0" || bytecode === "0x00") {
-    const signer = recoverPublicKey(sig, hash);
+    const signer = recoverAddress(sig, hash);
 
     return signer.toLowerCase() === address.toLowerCase();
   } else {

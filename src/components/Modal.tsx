@@ -3,13 +3,13 @@ import * as PropTypes from "prop-types";
 import styled from "styled-components";
 import { colors, transitions } from "../styles";
 
-interface ILightboxStyleProps {
+interface LightboxStyleProps {
   show: boolean;
   offset: number;
   opacity?: number;
 }
 
-const SLightbox = styled.div<ILightboxStyleProps>`
+const SLightbox = styled.div<LightboxStyleProps>`
   transition: opacity 0.1s ease-in-out;
   text-align: center;
   position: absolute;
@@ -53,13 +53,13 @@ const SHitbox = styled.div`
   bottom: 0;
 `;
 
-interface ICloseButtonStyleProps {
+interface CloseButtonStyleProps {
   size: number;
   color: string;
   onClick?: any;
 }
 
-const SCloseButton = styled.div<ICloseButtonStyleProps>`
+const SCloseButton = styled.div<CloseButtonStyleProps>`
   transition: ${transitions.short};
   position: absolute;
   width: ${({ size }) => `${size}px`};
@@ -107,22 +107,22 @@ const SModalContent = styled.div`
   word-wrap: break-word;
 `;
 
-interface IModalState {
+interface ModalState {
   offset: number;
 }
 
-interface IModalProps {
+interface ModalProps {
   children: React.ReactNode;
   show: boolean;
   toggleModal: any;
   opacity?: number;
 }
 
-const INITIAL_STATE: IModalState = {
+const INITIAL_STATE: ModalState = {
   offset: 0,
 };
 
-class Modal extends React.Component<IModalProps, IModalState> {
+class Modal extends React.Component<ModalProps, ModalState> {
   public static propTypes = {
     children: PropTypes.node.isRequired,
     show: PropTypes.bool.isRequired,
@@ -132,7 +132,7 @@ class Modal extends React.Component<IModalProps, IModalState> {
 
   public lightbox?: HTMLDivElement | null;
 
-  public state: IModalState = {
+  public state: ModalState = {
     ...INITIAL_STATE,
   };
 

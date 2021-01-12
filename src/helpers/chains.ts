@@ -1,6 +1,6 @@
-import { IChainData } from "../helpers/types";
+import { ChainData } from "../helpers/types";
 
-export const SUPPORTED_CHAINS: IChainData[] = [
+export const SUPPORTED_CHAINS: ChainData[] = [
   {
     name: "Ethereum Mainnet",
     short_name: "eth",

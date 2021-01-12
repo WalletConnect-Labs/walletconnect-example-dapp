@@ -1,11 +1,11 @@
 import * as React from "react";
 import Column from "./Column";
 import AssetRow from "./AssetRow";
-import { IAssetData } from "../helpers/types";
+import { AssetData } from "../helpers/types";
 
 const AccountAssets = (props: any) => {
   const { assets, chainId } = props;
-  const defaultNativeCurrency: IAssetData =
+  const defaultNativeCurrency: AssetData =
     chainId === 100
       ? {
           contractAddress: "",
@@ -22,10 +22,10 @@ const AccountAssets = (props: any) => {
           balance: "0",
         };
 
-  let nativeCurrency: IAssetData = defaultNativeCurrency;
-  let tokens: IAssetData[] = [];
+  let nativeCurrency: AssetData = defaultNativeCurrency;
+  let tokens: AssetData[] = [];
   if (assets && assets.length) {
-    const filteredNativeCurrency = assets.filter((asset: IAssetData) =>
+    const filteredNativeCurrency = assets.filter((asset: AssetData) =>
       asset && asset.symbol
         ? asset.symbol.toLowerCase() === nativeCurrency.symbol.toLowerCase()
         : false,
@@ -34,7 +34,7 @@ const AccountAssets = (props: any) => {
       filteredNativeCurrency && filteredNativeCurrency.length
         ? filteredNativeCurrency[0]
         : defaultNativeCurrency;
-    tokens = assets.filter((asset: IAssetData) =>
+    tokens = assets.filter((asset: AssetData) =>
       asset && asset.symbol
         ? asset.symbol.toLowerCase() !== nativeCurrency.symbol.toLowerCase()
         : false,

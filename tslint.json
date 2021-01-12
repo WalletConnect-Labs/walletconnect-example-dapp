@@ -9,13 +9,17 @@
     "ordered-imports": false,
     "jsx-no-lambda": false,
     "jsx-boolean-value": false,
-    "no-console": false
+    "no-console": false,
+    "interface-name": false,
+    "max-classes-per-file": false,
+    "member-ordering": false
   },
   "linterOptions": {
     "exclude": [
       "config/**/*.js",
       "node_modules/**/*.ts",
-      "coverage/lcov-report/*.js"
+      "coverage/lcov-report/*.js",
+      "src/**/*.json"
     ]
   }
 }

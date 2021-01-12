@@ -2,11 +2,11 @@ import * as React from "react";
 import * as PropTypes from "prop-types";
 import styled from "styled-components";
 
-interface IIconStyleProps {
+interface IconStyleProps {
   size: number;
 }
 
-const SIcon = styled.img<IIconStyleProps>`
+const SIcon = styled.img<IconStyleProps>`
   width: ${({ size }) => `${size}px`};
   height: ${({ size }) => `${size}px`};
 `;

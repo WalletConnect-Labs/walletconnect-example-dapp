@@ -1,4 +1,4 @@
-export interface IAssetData {
+export interface AssetData {
   symbol: string;
   name: string;
   decimals: string;
@@ -6,7 +6,7 @@ export interface IAssetData {
   balance?: string;
 }
 
-export interface IChainData {
+export interface ChainData {
   name: string;
   short_name: string;
   chain: string;
@@ -14,9 +14,9 @@ export interface IChainData {
   chain_id: number;
   network_id: number;
   rpc_url: string;
-  native_currency: IAssetData;
+  native_currency: AssetData;
 }
-export interface ITxData {
+export interface TxData {
   from: string;
   to: string;
   nonce: string;
@@ -26,7 +26,7 @@ export interface ITxData {
   data: string;
 }
 
-export interface IBlockScoutTx {
+export interface BlockScoutTx {
   value: string;
   txreceipt_status: string;
   transactionIndex: string;
@@ -47,7 +47,7 @@ export interface IBlockScoutTx {
   blockHash: string;
 }
 
-export interface IBlockScoutTokenTx {
+export interface BlockScoutTokenTx {
   value: string;
   transactionIndex: string;
   tokenSymbol: string;
@@ -69,7 +69,7 @@ export interface IBlockScoutTokenTx {
   blockHash: string;
 }
 
-export interface IParsedTx {
+export interface ParsedTx {
   timestamp: string;
   hash: string;
   from: string;
@@ -81,19 +81,19 @@ export interface IParsedTx {
   value: string;
   input: string;
   error: boolean;
-  asset: IAssetData;
-  operations: ITxOperation[];
+  asset: AssetData;
+  operations: TxOperation[];
 }
 
-export interface ITxOperation {
-  asset: IAssetData;
+export interface TxOperation {
+  asset: AssetData;
   value: string;
   from: string;
   to: string;
   functionName: string;
 }
 
-export interface IGasPricesResponse {
+export interface GasPricesResponse {
   fastWait: number;
   avgWait: number;
   blockNum: number;
@@ -107,24 +107,24 @@ export interface IGasPricesResponse {
   average: number;
 }
 
-export interface IGasPrice {
+export interface GasPrice {
   time: number;
   price: number;
 }
 
-export interface IGasPrices {
+export interface GasPrices {
   timestamp: number;
-  slow: IGasPrice;
-  average: IGasPrice;
-  fast: IGasPrice;
+  slow: GasPrice;
+  average: GasPrice;
+  fast: GasPrice;
 }
 
-export interface IMethodArgument {
+export interface MethodArgument {
   type: string;
 }
 
-export interface IMethod {
+export interface Method {
   signature: string;
   name: string;
-  args: IMethodArgument[];
+  args: MethodArgument[];
 }

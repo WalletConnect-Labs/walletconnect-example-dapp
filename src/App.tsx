@@ -18,7 +18,7 @@ import { apiGetAccountAssets } from "./helpers/api";
 //   hashPersonalMessage,
 // } from "./helpers/utilities";
 // import { convertAmountToRawNumber, convertStringToHex } from "./helpers/bignumber";
-import { IAssetData } from "./helpers/types";
+import { AssetData } from "./helpers/types";
 import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
 // import { eip712 } from "./helpers/eip712";
@@ -128,27 +128,27 @@ const STestButton = styled(Button as any)`
   margin: 12px;
 `;
 
-interface IAppState {
+interface AppState {
   client: WalletConnectClient | undefined;
   session: SessionTypes.Settled | undefined;
   fetching: boolean;
   connected: boolean;
-  chainId: number;
+  chainId: string;
   showModal: boolean;
   pendingRequest: boolean;
   uri: string;
   accounts: string[];
   address: string;
   result: any | undefined;
-  assets: IAssetData[];
+  assets: AssetData[];
 }
 
-const INITIAL_STATE: IAppState = {
+const INITIAL_STATE: AppState = {
   client: undefined,
   session: undefined,
   fetching: false,
   connected: false,
-  chainId: 1,
+  chainId: DEFAULT_CHAIN_ID,
   showModal: false,
   pendingRequest: false,
   uri: "",
@@ -159,7 +159,7 @@ const INITIAL_STATE: IAppState = {
 };
 
 class App extends React.Component<any, any> {
-  public state: IAppState = {
+  public state: AppState = {
     ...INITIAL_STATE,
   };
   public componentDidMount() {
@@ -203,14 +203,16 @@ class App extends React.Component<any, any> {
         },
         permissions: {
           blockchain: {
-            chainIds: [DEFAULT_CHAIN_ID],
+            chainIds: [this.state.chainId],
           },
           jsonrpc: {
             methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData"],
           },
         },
       });
+      QRCodeModal.close();
       this.setState({ session });
+      this.onSessionUpdate(session.state.accountIds, this.state.chainId);
     }
   };
 
@@ -230,7 +232,7 @@ class App extends React.Component<any, any> {
     this.resetApp();
   };
 
-  public onSessionUpdate = async (accounts: string[], chainId: number) => {
+  public onSessionUpdate = async (accounts: string[], chainId: string) => {
     const address = accounts[0];
     this.setState({ chainId, accounts, address });
     await this.getAccountAssets();
@@ -281,7 +283,7 @@ class App extends React.Component<any, any> {
   public render = () => {
     const {
       assets,
-      address,
+      accounts,
       connected,
       chainId,
       fetching,
@@ -293,13 +295,13 @@ class App extends React.Component<any, any> {
       <SLayout>
         <Column maxWidth={1000} spanHeight>
           <Header
-            connected={connected}
-            address={address}
-            chainId={chainId}
             disconnect={this.disconnect}
+            connected={connected}
+            chainId={chainId}
+            accounts={accounts}
           />
           <SContent>
-            {!address && !assets.length ? (
+            {!accounts.length && !assets.length ? (
               <SLanding center>
                 <h3>
                   {`Try out WalletConnect`}

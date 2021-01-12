@@ -1,10 +1,11 @@
 import * as React from "react";
 import styled from "styled-components";
-import * as PropTypes from "prop-types";
+import { getSupportedChains } from "caip-api";
+
 import Blockie from "./Blockie";
-import Banner from "./Banner";
-import { ellipseAddress, getChainData } from "../helpers/utilities";
-import { transitions } from "../styles";
+
+import { ellipseAddress } from "../helpers/utilities";
+import { fonts, responsive, transitions } from "../styles";
 
 const SHeader = styled.div`
   margin-top: -1px;
@@ -15,6 +16,9 @@ const SHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
+  @media screen and (${responsive.sm.max}) {
+    font-size: ${fonts.size.small};
+  }
 `;
 
 const SActiveAccount = styled.div`
@@ -38,21 +42,21 @@ const SActiveChain = styled(SActiveAccount as any)`
   }
 `;
 
-const SBlockie = styled(Blockie as any)`
-  margin-right: 10px;
-`;
-
-interface IHeaderStyle {
+interface HeaderStyle {
   connected: boolean;
 }
 
-const SAddress = styled.p<IHeaderStyle>`
+const SAddress = styled.p<HeaderStyle>`
   transition: ${transitions.base};
   font-weight: bold;
   margin: ${({ connected }) => (connected ? "-2px auto 0.7em" : "0")};
 `;
 
-const SDisconnect = styled.div<IHeaderStyle>`
+const SBlockie = styled(Blockie)`
+  margin-right: 10px;
+`;
+
+const SDisconnect = styled.div<HeaderStyle>`
   transition: ${transitions.button};
   font-size: 12px;
   font-family: monospace;
@@ -72,25 +76,24 @@ const SDisconnect = styled.div<IHeaderStyle>`
   }
 `;
 
-interface IHeaderProps {
+interface HeaderProps {
   disconnect: () => void;
   connected: boolean;
-  address: string;
-  chainId: number;
+  accounts: string[];
+  chainId: string;
 }
 
-const Header = (props: IHeaderProps) => {
-  const { connected, address, chainId, disconnect } = props;
-  const activeChain = chainId ? getChainData(chainId).name : null;
+const Header = (props: HeaderProps) => {
+  const { disconnect, connected, accounts, chainId } = props;
+  const chainName = chainId ? getSupportedChains()[chainId].name : undefined;
+  const address = accounts.length ? accounts[0].split("@")[0] : undefined;
   return (
     <SHeader {...props}>
-      {connected && activeChain ? (
+      {chainName && (
         <SActiveChain>
           <p>{`Connected to`}</p>
-          <p>{activeChain}</p>
+          <p>{chainName}</p>
         </SActiveChain>
-      ) : (
-        <Banner />
       )}
       {address && (
         <SActiveAccount>
@@ -103,11 +106,6 @@ const Header = (props: IHeaderProps) => {
       )}
     </SHeader>
   );
-};
-
-Header.propTypes = {
-  disconnect: PropTypes.func.isRequired,
-  address: PropTypes.string,
 };
 
 export default Header;
