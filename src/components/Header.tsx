@@ -4,7 +4,7 @@ import { getSupportedChains } from "caip-api";
 
 import Blockie from "./Blockie";
 
-import { ellipseAddress } from "../helpers/utilities";
+import { ellipseAddress } from "../helpers";
 import { fonts, responsive, transitions } from "../styles";
 
 const SHeader = styled.div`

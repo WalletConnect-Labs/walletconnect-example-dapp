@@ -1,4 +1,4 @@
-import { ChainData } from "../helpers/types";
+import { ChainData } from "../helpers";
 
 export const SUPPORTED_CHAINS: ChainData[] = [
   {

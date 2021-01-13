@@ -1,7 +1,7 @@
                 GNU LESSER GENERAL PUBLIC LICENSE
                       Version 3, 29 June 2007
 
-Copyright (C) 2018 WalletConnect Association.
+Copyright (C) 2020 WalletConnect Labs OÜ.
 Everyone is permitted to copy and distribute verbatim copies
 of this license document, but changing it is not allowed.
 
@@ -142,7 +142,7 @@ accompanying uncombined form of the same work.
 
 6.  Revised Versions of the GNU Lesser General Public License.
 
-The WalletConnect Association may publish revised and/or new versions
+The WalletConnect Labs OÜ may publish revised and/or new versions
 of the GNU Lesser General Public License from time to time. Such new
 versions will be similar in spirit to the present version, but may
 differ in detail to address new problems or concerns.
@@ -152,10 +152,10 @@ Library as you received it specifies that a certain numbered version
 of the GNU Lesser General Public License "or any later version"
 applies to it, you have the option of following the terms and
 conditions either of that published version or of any later version
-published by the WalletConnect Association. If the Library as you
+published by the WalletConnect Labs OÜ. If the Library as you
 received it does not specify a version number of the GNU Lesser
 General Public License, you may choose any version of the GNU Lesser
-General Public License ever published by the WalletConnect Association.
+General Public License ever published by the WalletConnect Labs OÜ.
 
 If the Library as you received it specifies that a proxy can decide
 whether future versions of the GNU Lesser General Public License shall

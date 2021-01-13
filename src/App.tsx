@@ -1,29 +1,22 @@
 import * as React from "react";
 import styled from "styled-components";
+import * as encUtils from "enc-utils";
 import QRCodeModal from "@walletconnect/qrcode-modal";
-import Button from "./components/Button";
 import WalletConnectClient, { CLIENT_EVENTS } from "@walletconnect/client";
+import { PairingTypes, SessionTypes } from "@walletconnect/types";
+
+import Button from "./components/Button";
 import Column from "./components/Column";
 import Wrapper from "./components/Wrapper";
 import Modal from "./components/Modal";
 import Header from "./components/Header";
 import Loader from "./components/Loader";
 import { fonts } from "./styles";
-import { apiGetAccountAssets } from "./helpers/api";
-// import { apiGetAccountAssets, apiGetGasPrices, apiGetAccountNonce } from "./helpers/api";
-// import {
-//   sanitizeHex,
-//   verifySignature,
-//   hashTypedDataMessage,
-//   hashPersonalMessage,
-// } from "./helpers/utilities";
-// import { convertAmountToRawNumber, convertStringToHex } from "./helpers/bignumber";
-import { AssetData } from "./helpers/types";
 import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
-// import { eip712 } from "./helpers/eip712";
-import { PairingTypes, SessionTypes } from "@walletconnect/types";
+
 import { DEFAULT_CHAIN_ID, DEFAULT_RELAY_PROVIDER } from "./constants";
+import { apiGetAccountAssets, AssetData, hashPersonalMessage, verifySignature } from "./helpers";
 
 const SLayout = styled.div`
   position: relative;
@@ -190,6 +183,16 @@ class App extends React.Component<any, any> {
         });
       },
     );
+
+    this.state.client.on(CLIENT_EVENTS.session.created, () => {
+      console.log("EVENT", "session_created");
+      this.setState({ connected: true });
+    });
+
+    this.state.client.on(CLIENT_EVENTS.session.deleted, () => {
+      console.log("EVENT", "session_deleted");
+      this.resetApp();
+    });
   };
 
   public connect = async () => {
@@ -203,7 +206,7 @@ class App extends React.Component<any, any> {
         },
         permissions: {
           blockchain: {
-            chainIds: [this.state.chainId],
+            chains: [this.state.chainId],
           },
           jsonrpc: {
             methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData"],
@@ -212,7 +215,7 @@ class App extends React.Component<any, any> {
       });
       QRCodeModal.close();
       this.setState({ session });
-      this.onSessionUpdate(session.state.accountIds, this.state.chainId);
+      this.onSessionUpdate(session.state.accounts, this.state.chainId);
     }
   };
 
@@ -226,10 +229,7 @@ class App extends React.Component<any, any> {
 
   public resetApp = async () => {
     this.setState({ ...INITIAL_STATE });
-  };
-
-  public onDisconnect = async () => {
-    this.resetApp();
+    this.init();
   };
 
   public onSessionUpdate = async (accounts: string[], chainId: string) => {
@@ -261,18 +261,57 @@ class App extends React.Component<any, any> {
   public testSignPersonalMessage = async () => {
     // const { client, session } = this.state;
     if (typeof this.state.client !== "undefined" && typeof this.state.session !== "undefined") {
-      const result = await this.state.client.request({
-        topic: this.state.session.topic,
-        chainId: "eip155:1",
-        request: {
+      try {
+        // test message
+        const message = "My email is john@doe.com - 1537836206101";
+
+        // encode message (hex)
+        const hexMsg = encUtils.utf8ToHex(message, true);
+
+        // get ethereum address
+        const address = this.state.address.split("@")[0];
+
+        // personal_sign params
+        const params = [address, hexMsg];
+
+        // open modal
+        this.toggleModal();
+
+        // toggle pending request indicator
+        this.setState({ pendingRequest: true });
+
+        // send message
+
+        const result = await this.state.client.request({
+          topic: this.state.session.topic,
+          chainId: "eip155:1",
+          request: {
+            method: "personal_sign",
+            params,
+          },
+        });
+
+        //  get ethereum chainId
+        const chainId = Number(this.state.chainId.split(":")[1]);
+
+        // verify signature
+        const hash = hashPersonalMessage(message);
+        const valid = await verifySignature(address, result, hash, chainId);
+
+        // format displayed result
+        const formattedResult = {
           method: "personal_sign",
-          params: [
-            "0x1d85568eEAbad713fBB5293B45ea066e552A90De",
-            "0x7468697320697320612074657374206d65737361676520746f206265207369676e6564",
-          ],
-        },
-      });
-      console.log(result);
+          address,
+          valid,
+          result,
+        };
+
+        // display result
+        this.setState({ pendingRequest: false, result: formattedResult || null });
+      } catch (error) {
+        console.error(error);
+        this.setState({ pendingRequest: false, result: null });
+      }
     }
   };
 

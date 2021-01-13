@@ -1,7 +1,7 @@
 import * as React from "react";
 import Column from "./Column";
 import AssetRow from "./AssetRow";
-import { AssetData } from "../helpers/types";
+import { AssetData } from "../helpers";
 
 const AccountAssets = (props: any) => {
   const { assets, chainId } = props;
