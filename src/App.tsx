@@ -3,6 +3,7 @@ import styled from "styled-components";
 import * as encUtils from "enc-utils";
 import QRCodeModal from "@walletconnect/qrcode-modal";
 import WalletConnectClient, { CLIENT_EVENTS } from "@walletconnect/client";
+import { getSessionMetadata } from "@walletconnect/utils";
 import { PairingTypes, SessionTypes } from "@walletconnect/types";
 
 import Button from "./components/Button";
@@ -15,8 +16,9 @@ import { fonts } from "./styles";
 import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
 
-import { DEFAULT_CHAIN_ID, DEFAULT_RELAY_PROVIDER } from "./constants";
+import { DEFAULT_APP_METADATA, DEFAULT_CHAINS, DEFAULT_RELAY_PROVIDER } from "./constants";
 import { apiGetAccountAssets, AssetData, hashPersonalMessage, verifySignature } from "./helpers";
+import { ETHEREUM_SIGNING_METHODS } from "./constants/ethereum";
 
 const SLayout = styled.div`
   position: relative;
@@ -126,12 +128,11 @@ interface AppState {
   session: SessionTypes.Settled | undefined;
   fetching: boolean;
   connected: boolean;
-  chainId: string;
+  chains: string[];
   showModal: boolean;
   pendingRequest: boolean;
   uri: string;
   accounts: string[];
-  address: string;
   result: any | undefined;
   assets: AssetData[];
 }
@@ -141,12 +142,11 @@ const INITIAL_STATE: AppState = {
   session: undefined,
   fetching: false,
   connected: false,
-  chainId: DEFAULT_CHAIN_ID,
+  chains: DEFAULT_CHAINS,
   showModal: false,
   pendingRequest: false,
   uri: "",
   accounts: [],
-  address: "",
   result: undefined,
   assets: [],
 };
@@ -165,10 +165,11 @@ class App extends React.Component<any, any> {
     });
 
     this.setState({ client });
-    await this.subscribeToEvents();
+    this.subscribeToEvents();
+    await this.checkConnectedSessions();
   };
 
-  public subscribeToEvents = async () => {
+  public subscribeToEvents = () => {
     if (typeof this.state.client === "undefined") {
       return;
     }
@@ -184,46 +185,54 @@ class App extends React.Component<any, any> {
       },
     );
 
-    this.state.client.on(CLIENT_EVENTS.session.created, () => {
-      console.log("EVENT", "session_created");
-      this.setState({ connected: true });
-    });
-
-    this.state.client.on(CLIENT_EVENTS.session.deleted, () => {
+    this.state.client.on(CLIENT_EVENTS.session.deleted, (session: SessionTypes.Settled) => {
+      if (session.topic !== this.state.session?.topic) return;
       console.log("EVENT", "session_deleted");
       this.resetApp();
     });
   };
 
-  public connect = async () => {
-    if (typeof this.state.client !== "undefined") {
-      const session = await this.state.client.connect({
-        metadata: {
-          name: "Example Dapp",
-          description: "Example Dapp",
-          url: "https://walletconnect.org/",
-          icons: ["https://walletconnect.org/walletconnect-logo.png"],
-        },
-        permissions: {
-          blockchain: {
-            chains: [this.state.chainId],
-          },
-          jsonrpc: {
-            methods: ["eth_sendTransaction", "personal_sign", "eth_signTypedData"],
-          },
-        },
-      });
-      QRCodeModal.close();
-      this.setState({ session });
-      this.onSessionUpdate(session.state.accounts, this.state.chainId);
+  public checkConnectedSessions = async () => {
+    if (typeof this.state.client === "undefined") {
+      throw new Error("WalletConnect is not initialized");
+    }
+    if (typeof this.state.session !== "undefined") return;
+    if (this.state.client.session.topics.length) {
+      const session = await this.state.client.session.get(this.state.client.session.topics[0]);
+      this.onSessionConnected(session);
     }
   };
 
-  public disconnect = async () => {
-    if (typeof this.state.client !== "undefined") {
-      // fix: send a reason
-      this.state.client.disconnect({ reason: "", topic: this.state.session?.topic || "" });
+  public connect = async () => {
+    if (typeof this.state.client === "undefined") {
+      throw new Error("WalletConnect is not initialized");
     }
+    const session = await this.state.client.connect({
+      metadata: getSessionMetadata() || DEFAULT_APP_METADATA,
+      permissions: {
+        blockchain: {
+          chains: this.state.chains,
+        },
+        jsonrpc: {
+          methods: ETHEREUM_SIGNING_METHODS,
+        },
+      },
+    });
+    QRCodeModal.close();
+    this.onSessionConnected(session);
+  };
+
+  public disconnect = async () => {
+    if (typeof this.state.client === "undefined") {
+      throw new Error("WalletConnect is not initialized");
+    }
+    if (typeof this.state.session === "undefined") {
+      throw new Error("Session is not connected");
+    }
+    await this.state.client.disconnect({
+      topic: this.state.session.topic,
+      reason: "User disconnected session",
+    });
     this.resetApp();
   };
 
@@ -232,18 +241,23 @@ class App extends React.Component<any, any> {
     this.init();
   };
 
+  public onSessionConnected = async (session: SessionTypes.Settled) => {
+    this.setState({ session, connected: true });
+    this.onSessionUpdate(session.state.accounts, this.state.chains[0]);
+  };
+
   public onSessionUpdate = async (accounts: string[], chainId: string) => {
-    const address = accounts[0];
-    this.setState({ chainId, accounts, address });
+    this.setState({ chainId, accounts });
     await this.getAccountAssets();
   };
 
   public getAccountAssets = async () => {
-    const { address, chainId } = this.state;
     this.setState({ fetching: true });
     try {
+      // get ethereum address
+      const address = this.state.accounts[0].split("@")[0];
       // get account balances
-      const assets = await apiGetAccountAssets(address, chainId);
+      const assets = await apiGetAccountAssets(address, this.state.chains[0]);
 
       this.setState({ fetching: false, assets });
     } catch (error) {
@@ -255,68 +269,72 @@ class App extends React.Component<any, any> {
   public toggleModal = () => this.setState({ showModal: !this.state.showModal });
 
   public testSendTransaction = async () => {
-    console.log("Send Transaction");
+    throw new Error("eth_sendTransaction is not implemented yet");
   };
 
   public testSignPersonalMessage = async () => {
-    // const { client, session } = this.state;
-    if (typeof this.state.client !== "undefined" && typeof this.state.session !== "undefined") {
-      try {
-        // test message
-        const message = "My email is john@doe.com - 1537836206101";
+    if (typeof this.state.client === "undefined") {
+      throw new Error("WalletConnect is not initialized");
+    }
+    if (typeof this.state.session === "undefined") {
+      throw new Error("Session is not connected");
+    }
 
-        // encode message (hex)
-        const hexMsg = encUtils.utf8ToHex(message, true);
+    try {
+      // test message
+      const message = `My email is john@doe.com - ${Date.now()}`;
 
-        // get ethereum address
-        const address = this.state.address.split("@")[0];
+      // encode message (hex)
+      const hexMsg = encUtils.utf8ToHex(message, true);
 
-        // personal_sign params
-        const params = [address, hexMsg];
+      // get ethereum address
+      const address = this.state.accounts[0].split("@")[0];
 
-        // open modal
-        this.toggleModal();
+      // personal_sign params
+      const params = [hexMsg, address];
 
-        // toggle pending request indicator
-        this.setState({ pendingRequest: true });
+      // open modal
+      this.toggleModal();
 
-        // send message
+      // toggle pending request indicator
+      this.setState({ pendingRequest: true });
 
-        const result = await this.state.client.request({
-          topic: this.state.session.topic,
-          chainId: "eip155:1",
-          request: {
-            method: "personal_sign",
-            params,
-          },
-        });
+      // send message
 
-        //  get ethereum chainId
-        const chainId = Number(this.state.chainId.split(":")[1]);
-
-        // verify signature
-        const hash = hashPersonalMessage(message);
-        const valid = await verifySignature(address, result, hash, chainId);
-
-        // format displayed result
-        const formattedResult = {
+      const result = await this.state.client.request({
+        topic: this.state.session.topic,
+        chainId: "eip155:1",
+        request: {
           method: "personal_sign",
-          address,
-          valid,
-          result,
-        };
+          params,
+        },
+      });
 
-        // display result
-        this.setState({ pendingRequest: false, result: formattedResult || null });
-      } catch (error) {
-        console.error(error);
-        this.setState({ pendingRequest: false, result: null });
-      }
+      //  get ethereum chainId
+      const chainId = Number(this.state.chains[0].split(":")[1]);
+
+      // verify signature
+      const hash = hashPersonalMessage(message);
+      const valid = await verifySignature(address, result, hash, chainId);
+
+      // format displayed result
+      const formattedResult = {
+        method: "personal_sign",
+        address,
+        valid,
+        result,
+      };
+
+      // display result
+      this.setState({ pendingRequest: false, result: formattedResult || null });
+    } catch (error) {
+      console.error(error);
+      this.setState({ pendingRequest: false, result: null });
     }
   };
 
   public testSignTypedData = async () => {
-    console.log("Sign typed data");
+    throw new Error("eth_signTypedData is not implemented yet");
   };
 
   public render = () => {
@@ -324,7 +342,7 @@ class App extends React.Component<any, any> {
       assets,
       accounts,
       connected,
-      chainId,
+      chains,
       fetching,
       showModal,
       pendingRequest,
@@ -336,7 +354,7 @@ class App extends React.Component<any, any> {
           <Header
             disconnect={this.disconnect}
             connected={connected}
-            chainId={chainId}
+            chainId={chains[0]}
             accounts={accounts}
           />
           <SContent>
@@ -374,7 +392,7 @@ class App extends React.Component<any, any> {
                 </Column>
                 <h3>Balances</h3>
                 {!fetching ? (
-                  <AccountAssets chainId={chainId} assets={assets} />
+                  <AccountAssets chainId={chains[0]} assets={assets} />
                 ) : (
                   <Column center>
                     <SContainer>
