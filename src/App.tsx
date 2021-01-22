@@ -233,12 +233,11 @@ class App extends React.Component<any, any> {
       topic: this.state.session.topic,
       reason: "User disconnected session",
     });
-    this.resetApp();
   };
 
   public resetApp = async () => {
-    this.setState({ ...INITIAL_STATE });
-    this.init();
+    const { client } = this.state;
+    this.setState({ ...INITIAL_STATE, client });
   };
 
   public onSessionConnected = async (session: SessionTypes.Settled) => {
@@ -417,7 +416,7 @@ class App extends React.Component<any, any> {
             <SModalContainer>
               <SModalTitle>{"Call Request Approved"}</SModalTitle>
               <STable>
-                {Object.keys(result).map(key => (
+                {Object.keys(result).map((key) => (
                   <SRow key={key}>
                     <SKey>{key}</SKey>
                     <SValue>{result[key].toString()}</SValue>

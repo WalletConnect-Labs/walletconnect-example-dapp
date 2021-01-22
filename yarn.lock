@@ -2600,7 +2600,7 @@
     "@typescript-eslint/types" "4.8.1"
     eslint-visitor-keys "^2.0.0"
 
-"@walletconnect/client@^2.0.0-alpha.18":
+"@walletconnect/client@^2.0.0-alpha.19":
   version "2.0.0-alpha.19"
   resolved "https://registry.yarnpkg.com/@walletconnect/client/-/client-2.0.0-alpha.19.tgz#52d3dc8550364ad2214a3a9cf9b1b5379795d6cb"
   integrity sha512-dqY9VIxwliT8mVfqjbv521sKpxmTbAWT4SetOv8OCpTt8541Iiv0Ln8EpyFULuUQgdx4xGwgDkmmVZ/vp1Na6w==
@@ -2622,7 +2622,7 @@
   resolved "https://registry.yarnpkg.com/@walletconnect/mobile-registry/-/mobile-registry-2.0.0-alpha.19.tgz#48964c87f4395f9929c6dcceba5a11aab0a119e9"
   integrity sha512-7NXOE8fwg/47wyxDi/GBI+zXOUmv4YcInv/s1eAC17JiqMjBY16kirbdUaphmVEAaeE+Q9Z7/9FVoiyOoCgt+g==
 
-"@walletconnect/qrcode-modal@^2.0.0-alpha.18":
+"@walletconnect/qrcode-modal@^2.0.0-alpha.19":
   version "2.0.0-alpha.19"
   resolved "https://registry.yarnpkg.com/@walletconnect/qrcode-modal/-/qrcode-modal-2.0.0-alpha.19.tgz#7589400db168efb930e04a5fe252191c46b15fd3"
   integrity sha512-yOyXPIS0YXaqjv7qVDSoTvaPOKa6EnD4LC5NxA9PPYemAStsYhdxjsB/M+ev49pLszBbokhKFRXgeuR7n2eCsQ==
