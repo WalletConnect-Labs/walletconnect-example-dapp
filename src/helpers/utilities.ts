@@ -9,7 +9,7 @@ import { eip1271 } from "./eip1271";
 export function capitalize(string: string): string {
   return string
     .split(" ")
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
 }
 
@@ -23,7 +23,7 @@ export function ellipseText(text = "", maxLength = 9999): string {
   const result =
     text
       .split(" ")
-      .filter(word => {
+      .filter((word) => {
         currentLength += word.length;
         if (ellipse || currentLength >= _maxLength) {
           ellipse = true;
@@ -143,12 +143,11 @@ export function hashPersonalMessage(msg: string): string {
 }
 
 export function encodeTypedDataMessage(msg: string): string {
-  const useV4 = true;
   const data = TypedDataUtils.sanitizeData(JSON.parse(msg));
   const buf = Buffer.concat([
     Buffer.from("1901", "hex"),
-    TypedDataUtils.hashStruct("EIP712Domain", data.domain, data.types, useV4),
-    TypedDataUtils.hashStruct(data.primaryType as string, data.message, data.types, useV4),
+    TypedDataUtils.hashStruct("EIP712Domain", data.domain, data.types),
+    TypedDataUtils.hashStruct(data.primaryType as string, data.message, data.types),
   ]);
   return ethUtil.bufferToHex(buf);
 }
