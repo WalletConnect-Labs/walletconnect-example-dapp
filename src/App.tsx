@@ -19,6 +19,7 @@ import AccountAssets from "./components/AccountAssets";
 import { DEFAULT_APP_METADATA, DEFAULT_CHAINS, DEFAULT_RELAY_PROVIDER } from "./constants";
 import { apiGetAccountAssets, AssetData, hashPersonalMessage, verifySignature } from "./helpers";
 import { ETHEREUM_SIGNING_METHODS } from "./constants/ethereum";
+import Blockchain from "./components/Blockchain";
 
 const SLayout = styled.div`
   position: relative;
@@ -129,6 +130,7 @@ interface AppState {
   fetching: boolean;
   connected: boolean;
   chains: string[];
+  activeChains: string[];
   showModal: boolean;
   pendingRequest: boolean;
   uri: string;
@@ -143,6 +145,7 @@ const INITIAL_STATE: AppState = {
   fetching: false,
   connected: false,
   chains: DEFAULT_CHAINS,
+  activeChains: [],
   showModal: false,
   pendingRequest: false,
   uri: "",
@@ -336,12 +339,23 @@ class App extends React.Component<any, any> {
     throw new Error("eth_signTypedData is not implemented yet");
   };
 
+  public handleChainClick = (chainId: string) => {
+    const { activeChains } = this.state;
+    if (activeChains.includes(chainId)) {
+      this.setState({ activeChains: activeChains.filter((chain) => chain !== chainId) });
+    } else {
+      this.setState({ activeChains: [...activeChains, chainId] });
+    }
+  };
+
   public render = () => {
+    console.log("Chains:", this.state.chains);
     const {
       assets,
       accounts,
       connected,
       chains,
+      activeChains,
       fetching,
       showModal,
       pendingRequest,
@@ -350,10 +364,11 @@ class App extends React.Component<any, any> {
     return (
       <SLayout>
         <Column maxWidth={1000} spanHeight>
+          {/* Modify component to accept several chains */}
           <Header
             disconnect={this.disconnect}
             connected={connected}
-            chainId={chains[0]}
+            chainIds={activeChains}
             accounts={accounts}
           />
           <SContent>
@@ -365,6 +380,15 @@ class App extends React.Component<any, any> {
                   <span>{`v${process.env.REACT_APP_VERSION}`}</span>
                 </h3>
                 <SButtonContainer>
+                  <h6>Select chains:</h6>
+                  {this.state.chains.map((chain) => (
+                    <Blockchain
+                      key={chain}
+                      chainId={chain}
+                      onClick={this.handleChainClick}
+                      active={activeChains.includes(chain)}
+                    />
+                  ))}
                   <SConnectButton left onClick={this.connect} fetching={fetching}>
                     {"Connect to WalletConnect"}
                   </SConnectButton>

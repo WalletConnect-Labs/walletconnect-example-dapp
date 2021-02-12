@@ -194,3 +194,19 @@ export async function verifySignature(
     return eip1271.isValidSignature(address, sig, hash, provider);
   }
 }
+
+export function convertHexToNumber(hex: string) {
+  try {
+    return encUtils.hexToNumber(hex);
+  } catch (e) {
+    return hex;
+  }
+}
+
+export function convertHexToUtf8(hex: string) {
+  try {
+    return encUtils.hexToUtf8(hex);
+  } catch (e) {
+    return hex;
+  }
+}

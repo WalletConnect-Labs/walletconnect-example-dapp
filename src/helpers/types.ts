@@ -1,3 +1,6 @@
+import { ChainConfig } from "caip-wallet";
+import { SessionTypes } from "@walletconnect/types";
+
 export interface AssetData {
   symbol: string;
   name: string;
@@ -127,4 +130,47 @@ export interface Method {
   signature: string;
   name: string;
   args: MethodArgument[];
+}
+
+export interface ChainRequestRender {
+  label: string;
+  value: string;
+}
+
+export interface ChainMetadata extends ChainConfig {
+  logo: string;
+  color: string;
+}
+
+export interface NamespaceMetadata {
+  [reference: string]: ChainMetadata;
+}
+
+export declare namespace Cards {
+  export interface Default {
+    type: "default";
+    data: any;
+  }
+
+  export interface Proposal {
+    type: "proposal";
+    data: { proposal: SessionTypes.Proposal };
+  }
+
+  export interface Session {
+    type: "session";
+    data: { session: SessionTypes.Created };
+  }
+
+  export interface Request {
+    type: "request";
+    data: { request: SessionTypes.PayloadEvent; peer: SessionTypes.Peer };
+  }
+
+  export interface Settings {
+    type: "settings";
+    data: { mnemonic: string; chains: string[] };
+  }
+
+  export type All = Default | Proposal | Session | Request | Settings;
 }
