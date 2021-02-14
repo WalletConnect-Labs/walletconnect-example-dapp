@@ -20,10 +20,16 @@ import { DEFAULT_APP_METADATA, DEFAULT_CHAINS, DEFAULT_RELAY_PROVIDER } from "./
 import { ETHEREUM_SIGNING_METHODS } from "./constants/ethereum";
 import {
   apiGetAccountAssets,
+  apiGetAccountNonce,
   AssetData,
-  getChainData,
+  eip712,
   hashPersonalMessage,
   verifySignature,
+  sanitizeHex,
+  convertStringToHex,
+  apiGetGasPrices,
+  convertAmountToRawNumber,
+  getAssetsByChainId,
 } from "./helpers";
 import { fonts } from "./styles";
 
@@ -296,8 +302,80 @@ class App extends React.Component<any, any> {
 
   public toggleModal = () => this.setState({ showModal: !this.state.showModal });
 
-  public testSendTransaction = async () => {
-    throw new Error("eth_sendTransaction is not implemented yet");
+  public testSendTransaction = async (chain: string) => {
+    if (typeof this.state.client === "undefined") {
+      throw new Error("WalletConnect is not initialized");
+    }
+    if (typeof this.state.session === "undefined") {
+      throw new Error("Session is not connected");
+    }
+
+    try {
+      const address =
+        this.state.accounts.find((account) => account.split("@")[1] === chain)?.split("@")[0] || "";
+
+      // open modal
+      this.toggleModal();
+
+      // toggle pending request indicator
+      this.setState({ pendingRequest: true });
+
+      // nonce
+      const _nonce = await apiGetAccountNonce(address, chain);
+      const nonce = sanitizeHex(convertStringToHex(_nonce));
+
+      // gasPrice
+      const gasPrices = await apiGetGasPrices();
+      const _gasPrice = gasPrices.slow.price;
+
+      const balance = getAssetsByChainId(this.state.assets, chain)[0]?.balance || 0;
+      if (balance < _gasPrice) {
+        const formattedResult = {
+          method: "eth_sendTransaction",
+          address,
+          valid: false,
+          result: "Insufficient funds for intrinsic transaction cost",
+        };
+        this.setState({ pendingRequest: false, result: formattedResult || null });
+        return;
+      }
+
+      const gasPrice = sanitizeHex(convertStringToHex(convertAmountToRawNumber(_gasPrice, 9)));
+
+      // gasLimit
+      const _gasLimit = 21000;
+      const gasLimit = sanitizeHex(convertStringToHex(_gasLimit));
+
+      // value
+      const _value = 0;
+      const value = sanitizeHex(convertStringToHex(_value));
+
+      const tx = [{ from: address, to: address, data: "0x", nonce, gasPrice, gasLimit, value }];
+
+      const result = await this.state.client.request({
+        topic: this.state.session.topic,
+        chainId: chain,
+        request: {
+          method: "eth_sendTransaction",
+          params: tx,
+        },
+      });
+
+      // format displayed result
+      const formattedResult = {
+        method: "eth_sendTransaction",
+        address,
+        // Change.
+        valid: true,
+        result,
+      };
+
+      // display result
+      this.setState({ pendingRequest: false, result: formattedResult || null });
+    } catch (error) {
+      console.error(error);
+      this.setState({ pendingRequest: false, result: null });
+    }
   };
 
   public testSignPersonalMessage = async (chain: string) => {
@@ -436,7 +514,7 @@ class App extends React.Component<any, any> {
                       children={
                         <SBlockchainChildrenContainer>
                           <SFullWidthContainer>
-                            <STestButton left onClick={this.testSendTransaction}>
+                            <STestButton left onClick={() => this.testSendTransaction(chain)}>
                               {"eth_sendTransaction"}
                             </STestButton>
 
@@ -449,14 +527,9 @@ class App extends React.Component<any, any> {
                             </STestButton>
                           </SFullWidthContainer>
                           {!fetching ? (
-                            // temporary, will not work for all networks
                             <AccountAssets
                               chainId={Number(chain.split(":")[1])}
-                              assets={assets.filter(
-                                (asset) =>
-                                  asset.symbol.toLowerCase() ===
-                                  getChainData(Number(chain.split(":")[1])).short_name,
-                              )}
+                              assets={getAssetsByChainId(assets, chain)}
                             />
                           ) : (
                             <Column center>
@@ -485,7 +558,9 @@ class App extends React.Component<any, any> {
             </SModalContainer>
           ) : result ? (
             <SModalContainer>
-              <SModalTitle>{"Call Request Approved"}</SModalTitle>
+              <SModalTitle>
+                {result.valid ? "Call Request Approved" : "Call Request Failed"}
+              </SModalTitle>
               <STable>
                 {Object.keys(result).map((key) => (
                   <SRow key={key}>
