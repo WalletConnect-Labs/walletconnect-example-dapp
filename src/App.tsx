@@ -439,8 +439,60 @@ class App extends React.Component<any, any> {
     }
   };
 
-  public testSignTypedData = async () => {
-    throw new Error("eth_signTypedData is not implemented yet");
+  public testSignTypedData = async (chain: string) => {
+    if (typeof this.state.client === "undefined") {
+      throw new Error("WalletConnect is not initialized");
+    }
+    if (typeof this.state.session === "undefined") {
+      throw new Error("Session is not connected");
+    }
+    try {
+      // test message
+      const message = JSON.stringify(eip712.example);
+
+      // get ethereum address
+      const address = this.state.accounts.find((account) => account.endsWith(chain))?.split("@")[0];
+      if (address === undefined) throw new Error("Address is not valid");
+
+      // eth_signTypedData params
+      const params = [address, message];
+      // open modal
+      this.toggleModal();
+
+      // toggle pending request indicator
+      this.setState({ pendingRequest: true });
+
+      // send message
+      const result = await this.state.client.request({
+        topic: this.state.session.topic,
+        chainId: chain,
+        request: {
+          method: "eth_signTypedData",
+          params,
+        },
+      });
+
+      //  get chainId
+      const chainId = Number(chain.split(":")[1]);
+
+      // verify signature
+      const hash = hashPersonalMessage(message);
+      const valid = await verifySignature(address, result, hash, chainId);
+
+      // format displayed result
+      const formattedResult = {
+        method: "eth_signTypedData",
+        address,
+        valid,
+        result,
+      };
+
+      // display result
+      this.setState({ pendingRequest: false, result: formattedResult || null });
+    } catch (error) {
+      console.error(error);
+      this.setState({ pendingRequest: false, result: null });
+    }
   };
 
   public handleChainSelectionClick = (chainId: string) => {
@@ -522,7 +574,7 @@ class App extends React.Component<any, any> {
                               {"personal_sign"}
                             </STestButton>
 
-                            <STestButton left onClick={this.testSignTypedData}>
+                            <STestButton left onClick={() => this.testSignTypedData(chain)}>
                               {"eth_signTypedData"}
                             </STestButton>
                           </SFullWidthContainer>
