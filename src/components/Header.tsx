@@ -86,9 +86,7 @@ interface HeaderProps {
 const Header = (props: HeaderProps) => {
   const { disconnect, connected, accounts, chainIds } = props;
   const supportedChains = getSupportedChains();
-  const chainNames = chainIds
-    ? chainIds.map((chainId) => supportedChains[chainId].name)
-    : undefined;
+  const chainNames = chainIds ? chainIds.map((chainId) => supportedChains[chainId].name) : null;
   const address = accounts.length ? accounts[0].split("@")[0] : undefined;
   return (
     <SHeader {...props}>
@@ -96,7 +94,7 @@ const Header = (props: HeaderProps) => {
         <SActiveChain>
           <p>{`Connected to`}</p>
           {chainNames?.map((chainName) => (
-            <p>{chainName}</p>
+            <p key={chainName}>{chainName}</p>
           ))}
         </SActiveChain>
       )}

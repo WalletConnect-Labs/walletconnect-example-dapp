@@ -1,30 +1,35 @@
+import * as encUtils from "enc-utils";
 import * as React from "react";
 import styled from "styled-components";
-import * as encUtils from "enc-utils";
-import QRCodeModal from "@walletconnect/qrcode-modal";
-import WalletConnectClient, { CLIENT_EVENTS } from "@walletconnect/client";
-import { getSessionMetadata } from "@walletconnect/utils";
-import { PairingTypes, SessionTypes } from "@walletconnect/types";
 
+import WalletConnectClient, { CLIENT_EVENTS } from "@walletconnect/client";
+import QRCodeModal from "@walletconnect/qrcode-modal";
+import { PairingTypes, SessionTypes } from "@walletconnect/types";
+import { getSessionMetadata } from "@walletconnect/utils";
+
+import AccountAssets from "./components/AccountAssets";
+import Banner from "./components/Banner";
+import Blockchain from "./components/Blockchain";
 import Button from "./components/Button";
 import Column from "./components/Column";
-import Wrapper from "./components/Wrapper";
-import Modal from "./components/Modal";
 import Header from "./components/Header";
 import Loader from "./components/Loader";
-import { fonts } from "./styles";
-import Banner from "./components/Banner";
-import AccountAssets from "./components/AccountAssets";
-
+import Modal from "./components/Modal";
+import Wrapper from "./components/Wrapper";
 import { DEFAULT_APP_METADATA, DEFAULT_CHAINS, DEFAULT_RELAY_PROVIDER } from "./constants";
-import { apiGetAccountAssets, AssetData, hashPersonalMessage, verifySignature } from "./helpers";
 import { ETHEREUM_SIGNING_METHODS } from "./constants/ethereum";
-import Blockchain from "./components/Blockchain";
+import {
+  apiGetAccountAssets,
+  AssetData,
+  getChainData,
+  hashPersonalMessage,
+  verifySignature,
+} from "./helpers";
+import { fonts } from "./styles";
 
 const SLayout = styled.div`
   position: relative;
   width: 100%;
-  /* height: 100%; */
   min-height: 100vh;
   text-align: center;
 `;
@@ -81,6 +86,7 @@ const SModalParagraph = styled.p`
 // @ts-ignore
 const SBalances = styled(SLanding as any)`
   height: 100%;
+  padding-bottom: 30px;
   & h3 {
     padding-top: 30px;
   }
@@ -107,7 +113,7 @@ const SValue = styled.div`
   font-family: monospace;
 `;
 
-const STestButtonContainer = styled.div`
+const SFullWidthContainer = styled.div`
   width: 100%;
   display: flex;
   justify-content: center;
@@ -120,8 +126,22 @@ const STestButton = styled(Button as any)`
   font-size: ${fonts.size.medium};
   height: 44px;
   width: 100%;
-  max-width: 175px;
-  margin: 12px;
+  margin: 12px 0;
+`;
+
+const SBlockchainContainer = styled(SFullWidthContainer)`
+  justify-content: space-between;
+  & > div {
+    margin: 12px 0;
+    flex: 1 0 100%;
+    @media (min-width: 648px) {
+      flex: 0 1 48%;
+    }
+  }
+`;
+
+const SBlockchainChildrenContainer = styled(SFullWidthContainer)`
+  flex-direction: column;
 `;
 
 interface AppState {
@@ -130,7 +150,6 @@ interface AppState {
   fetching: boolean;
   connected: boolean;
   chains: string[];
-  activeChains: string[];
   showModal: boolean;
   pendingRequest: boolean;
   uri: string;
@@ -144,8 +163,7 @@ const INITIAL_STATE: AppState = {
   session: undefined,
   fetching: false,
   connected: false,
-  chains: DEFAULT_CHAINS,
-  activeChains: [],
+  chains: [],
   showModal: false,
   pendingRequest: false,
   uri: "",
@@ -202,6 +220,8 @@ class App extends React.Component<any, any> {
     if (typeof this.state.session !== "undefined") return;
     if (this.state.client.session.topics.length) {
       const session = await this.state.client.session.get(this.state.client.session.topics[0]);
+      const chains = session.state.accounts.map((account) => account.split("@")[1]);
+      this.setState({ accounts: session.state.accounts, chains });
       this.onSessionConnected(session);
     }
   };
@@ -245,22 +265,28 @@ class App extends React.Component<any, any> {
 
   public onSessionConnected = async (session: SessionTypes.Settled) => {
     this.setState({ session, connected: true });
-    this.onSessionUpdate(session.state.accounts, this.state.chains[0]);
+    this.onSessionUpdate(session.state.accounts, session.permissions.blockchain.chains);
   };
 
-  public onSessionUpdate = async (accounts: string[], chainId: string) => {
-    this.setState({ chainId, accounts });
+  public onSessionUpdate = async (accounts: string[], chains: string[]) => {
+    this.setState({ chains, accounts });
     await this.getAccountAssets();
   };
 
   public getAccountAssets = async () => {
     this.setState({ fetching: true });
     try {
-      // get ethereum address
-      const address = this.state.accounts[0].split("@")[0];
-      // get account balances
-      const assets = await apiGetAccountAssets(address, this.state.chains[0]);
+      // get addresses and assets
+      const assetsPromises = this.state.accounts.map((account) => {
+        const [address, chain] = account.split("@");
+        return apiGetAccountAssets(address, chain);
+      });
 
+      // while we get goerli to work on the api
+      const assets = (await Promise.allSettled(assetsPromises)).reduce(
+        (assets, result) => (result.status === "fulfilled" ? assets.concat(result.value) : assets),
+        [] as AssetData[],
+      );
       this.setState({ fetching: false, assets });
     } catch (error) {
       console.error(error);
@@ -274,7 +300,7 @@ class App extends React.Component<any, any> {
     throw new Error("eth_sendTransaction is not implemented yet");
   };
 
-  public testSignPersonalMessage = async () => {
+  public testSignPersonalMessage = async (chain: string) => {
     if (typeof this.state.client === "undefined") {
       throw new Error("WalletConnect is not initialized");
     }
@@ -290,7 +316,8 @@ class App extends React.Component<any, any> {
       const hexMsg = encUtils.utf8ToHex(message, true);
 
       // get ethereum address
-      const address = this.state.accounts[0].split("@")[0];
+      const address = this.state.accounts.find((account) => account.endsWith(chain))?.split("@")[0];
+      if (address === undefined) throw new Error("Address is not valid");
 
       // personal_sign params
       const params = [hexMsg, address];
@@ -302,18 +329,17 @@ class App extends React.Component<any, any> {
       this.setState({ pendingRequest: true });
 
       // send message
-
       const result = await this.state.client.request({
         topic: this.state.session.topic,
-        chainId: "eip155:1",
+        chainId: chain,
         request: {
           method: "personal_sign",
           params,
         },
       });
 
-      //  get ethereum chainId
-      const chainId = Number(this.state.chains[0].split(":")[1]);
+      //  get chainId
+      const chainId = Number(chain.split(":")[1]);
 
       // verify signature
       const hash = hashPersonalMessage(message);
@@ -339,23 +365,21 @@ class App extends React.Component<any, any> {
     throw new Error("eth_signTypedData is not implemented yet");
   };
 
-  public handleChainClick = (chainId: string) => {
-    const { activeChains } = this.state;
-    if (activeChains.includes(chainId)) {
-      this.setState({ activeChains: activeChains.filter((chain) => chain !== chainId) });
+  public handleChainSelectionClick = (chainId: string) => {
+    const { chains } = this.state;
+    if (chains.includes(chainId)) {
+      this.setState({ chains: chains.filter((chain) => chain !== chainId) });
     } else {
-      this.setState({ activeChains: [...activeChains, chainId] });
+      this.setState({ chains: [...chains, chainId] });
     }
   };
 
   public render = () => {
-    console.log("Chains:", this.state.chains);
     const {
       assets,
       accounts,
       connected,
       chains,
-      activeChains,
       fetching,
       showModal,
       pendingRequest,
@@ -364,11 +388,10 @@ class App extends React.Component<any, any> {
     return (
       <SLayout>
         <Column maxWidth={1000} spanHeight>
-          {/* Modify component to accept several chains */}
           <Header
             disconnect={this.disconnect}
             connected={connected}
-            chainIds={activeChains}
+            chainIds={chains}
             accounts={accounts}
           />
           <SContent>
@@ -381,15 +404,20 @@ class App extends React.Component<any, any> {
                 </h3>
                 <SButtonContainer>
                   <h6>Select chains:</h6>
-                  {this.state.chains.map((chain) => (
+                  {DEFAULT_CHAINS.map((chain) => (
                     <Blockchain
                       key={chain}
                       chainId={chain}
-                      onClick={this.handleChainClick}
-                      active={activeChains.includes(chain)}
+                      onClick={this.handleChainSelectionClick}
+                      active={chains.includes(chain)}
                     />
                   ))}
-                  <SConnectButton left onClick={this.connect} fetching={fetching}>
+                  <SConnectButton
+                    left
+                    onClick={this.connect}
+                    fetching={fetching}
+                    disabled={!chains.length}
+                  >
                     {"Connect to WalletConnect"}
                   </SConnectButton>
                 </SButtonContainer>
@@ -397,32 +425,51 @@ class App extends React.Component<any, any> {
             ) : (
               <SBalances>
                 <Banner />
-                <h3>Actions</h3>
-                <Column center>
-                  <STestButtonContainer>
-                    <STestButton left onClick={this.testSendTransaction}>
-                      {"eth_sendTransaction"}
-                    </STestButton>
+                <h3>Connected networks</h3>
+                <SBlockchainContainer>
+                  {this.state.chains.map((chain) => (
+                    <Blockchain
+                      key={chain}
+                      address={accounts.find((account) => account.endsWith(chain))?.split("@")[0]}
+                      chainId={chain}
+                      active={chains.includes(chain)}
+                      children={
+                        <SBlockchainChildrenContainer>
+                          <SFullWidthContainer>
+                            <STestButton left onClick={this.testSendTransaction}>
+                              {"eth_sendTransaction"}
+                            </STestButton>
 
-                    <STestButton left onClick={this.testSignPersonalMessage}>
-                      {"personal_sign"}
-                    </STestButton>
+                            <STestButton left onClick={() => this.testSignPersonalMessage(chain)}>
+                              {"personal_sign"}
+                            </STestButton>
 
-                    <STestButton left onClick={this.testSignTypedData}>
-                      {"eth_signTypedData"}
-                    </STestButton>
-                  </STestButtonContainer>
-                </Column>
-                <h3>Balances</h3>
-                {!fetching ? (
-                  <AccountAssets chainId={chains[0]} assets={assets} />
-                ) : (
-                  <Column center>
-                    <SContainer>
-                      <Loader />
-                    </SContainer>
-                  </Column>
-                )}
+                            <STestButton left onClick={this.testSignTypedData}>
+                              {"eth_signTypedData"}
+                            </STestButton>
+                          </SFullWidthContainer>
+                          {!fetching ? (
+                            // temporary, will not work for all networks
+                            <AccountAssets
+                              chainId={Number(chain.split(":")[1])}
+                              assets={assets.filter(
+                                (asset) =>
+                                  asset.symbol.toLowerCase() ===
+                                  getChainData(Number(chain.split(":")[1])).short_name,
+                              )}
+                            />
+                          ) : (
+                            <Column center>
+                              <SContainer>
+                                <Loader />
+                              </SContainer>
+                            </Column>
+                          )}
+                        </SBlockchainChildrenContainer>
+                      }
+                    />
+                  ))}
+                </SBlockchainContainer>
               </SBalances>
             )}
           </SContent>

@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { PropsWithChildren, FC } from "react";
 import styled from "styled-components";
 
 import { getChainMetadata } from "../chains";
@@ -44,7 +44,9 @@ interface BlockchainProps {
   active?: boolean;
 }
 
-const Blockchain = (props: BlockchainProps) => {
+const Blockchain: FC<PropsWithChildren<BlockchainProps>> = (
+  props: PropsWithChildren<BlockchainProps>,
+) => {
   const { chainId, address, onClick, active } = props;
   const chainMeta = getChainMetadata(chainId);
   return (
@@ -59,6 +61,7 @@ const Blockchain = (props: BlockchainProps) => {
           <p>{chainMeta.name}</p>
         </SChain>
         {!!address && <p>{ellipseAddress(address)}</p>}
+        {props.children}
       </SAccount>
     </React.Fragment>
   );

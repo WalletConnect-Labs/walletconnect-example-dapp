@@ -3,7 +3,12 @@ import Column from "./Column";
 import AssetRow from "./AssetRow";
 import { AssetData } from "../helpers";
 
-const AccountAssets = (props: any) => {
+interface IAccountAssetsProps {
+  chainId: number;
+  assets: AssetData[];
+}
+
+const AccountAssets = (props: IAccountAssetsProps) => {
   const { assets, chainId } = props;
   const defaultNativeCurrency: AssetData =
     chainId === 100
