@@ -3,12 +3,12 @@ import Column from "./Column";
 import AssetRow from "./AssetRow";
 import { AssetData } from "../helpers";
 
-interface IAccountAssetsProps {
+interface AssetListProps {
   chainId: number;
   assets: AssetData[];
 }
 
-const AccountAssets = (props: IAccountAssetsProps) => {
+const AssetList = (props: AssetListProps) => {
   const { assets, chainId } = props;
   const defaultNativeCurrency: AssetData =
     chainId === 100
@@ -48,11 +48,11 @@ const AccountAssets = (props: IAccountAssetsProps) => {
   return (
     <Column center>
       <AssetRow key={nativeCurrency.name} asset={nativeCurrency} />
-      {tokens.map(token => (
+      {tokens.map((token) => (
         <AssetRow key={token.symbol} asset={token} />
       ))}
     </Column>
   );
 };
 
-export default AccountAssets;
+export default AssetList;

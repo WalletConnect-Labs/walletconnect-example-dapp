@@ -1,5 +1,5 @@
 import { JsonRpcRequest } from "@json-rpc-tools/utils";
-import { config } from "caip-wallet";
+import { config } from "caip-api";
 
 import polkadotLogo from "../assets/polkadot.png";
 

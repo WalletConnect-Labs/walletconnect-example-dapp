@@ -7,7 +7,6 @@ import QRCodeModal from "@walletconnect/qrcode-modal";
 import { PairingTypes, SessionTypes } from "@walletconnect/types";
 import { getSessionMetadata } from "@walletconnect/utils";
 
-import AccountAssets from "./components/AccountAssets";
 import Banner from "./components/Banner";
 import Blockchain from "./components/Blockchain";
 import Button from "./components/Button";
@@ -22,6 +21,7 @@ import {
   apiGetAccountAssets,
   apiGetAccountNonce,
   AssetData,
+  AccountAction,
   eip712,
   hashPersonalMessage,
   verifySignature,
@@ -127,15 +127,7 @@ const SFullWidthContainer = styled.div`
   flex-wrap: wrap;
 `;
 
-const STestButton = styled(Button as any)`
-  border-radius: 8px;
-  font-size: ${fonts.size.medium};
-  height: 44px;
-  width: 100%;
-  margin: 12px 0;
-`;
-
-const SBlockchainContainer = styled(SFullWidthContainer)`
+const SAccounts = styled(SFullWidthContainer)`
   justify-content: space-between;
   & > div {
     margin: 12px 0;
@@ -146,15 +138,10 @@ const SBlockchainContainer = styled(SFullWidthContainer)`
   }
 `;
 
-const SBlockchainChildrenContainer = styled(SFullWidthContainer)`
-  flex-direction: column;
-`;
-
 interface AppState {
   client: WalletConnectClient | undefined;
-  session: SessionTypes.Settled | undefined;
+  session: SessionTypes.Created | undefined;
   fetching: boolean;
-  connected: boolean;
   chains: string[];
   showModal: boolean;
   pendingRequest: boolean;
@@ -168,7 +155,6 @@ const INITIAL_STATE: AppState = {
   client: undefined,
   session: undefined,
   fetching: false,
-  connected: false,
   chains: [],
   showModal: false,
   pendingRequest: false,
@@ -270,7 +256,7 @@ class App extends React.Component<any, any> {
   };
 
   public onSessionConnected = async (session: SessionTypes.Settled) => {
-    this.setState({ session, connected: true });
+    this.setState({ session });
     this.onSessionUpdate(session.state.accounts, session.permissions.blockchain.chains);
   };
 
@@ -284,8 +270,8 @@ class App extends React.Component<any, any> {
     try {
       // get addresses and assets
       const assetsPromises = this.state.accounts.map((account) => {
-        const [address, chain] = account.split("@");
-        return apiGetAccountAssets(address, chain);
+        const [address, chainId] = account.split("@");
+        return apiGetAccountAssets(address, chainId);
       });
 
       // while we get goerli to work on the api
@@ -302,7 +288,7 @@ class App extends React.Component<any, any> {
 
   public toggleModal = () => this.setState({ showModal: !this.state.showModal });
 
-  public testSendTransaction = async (chain: string) => {
+  public testSendTransaction = async (chainId: string) => {
     if (typeof this.state.client === "undefined") {
       throw new Error("WalletConnect is not initialized");
     }
@@ -312,7 +298,8 @@ class App extends React.Component<any, any> {
 
     try {
       const address =
-        this.state.accounts.find((account) => account.split("@")[1] === chain)?.split("@")[0] || "";
+        this.state.accounts.find((account) => account.split("@")[1] === chainId)?.split("@")[0] ||
+        "";
 
       // open modal
       this.toggleModal();
@@ -321,14 +308,14 @@ class App extends React.Component<any, any> {
       this.setState({ pendingRequest: true });
 
       // nonce
-      const _nonce = await apiGetAccountNonce(address, chain);
+      const _nonce = await apiGetAccountNonce(address, chainId);
       const nonce = sanitizeHex(convertStringToHex(_nonce));
 
       // gasPrice
       const gasPrices = await apiGetGasPrices();
       const _gasPrice = gasPrices.slow.price;
 
-      const balance = getAssetsByChainId(this.state.assets, chain)[0]?.balance || 0;
+      const balance = getAssetsByChainId(this.state.assets, chainId)[0]?.balance || 0;
       if (balance < _gasPrice) {
         const formattedResult = {
           method: "eth_sendTransaction",
@@ -354,7 +341,7 @@ class App extends React.Component<any, any> {
 
       const result = await this.state.client.request({
         topic: this.state.session.topic,
-        chainId: chain,
+        chainId,
         request: {
           method: "eth_sendTransaction",
           params: tx,
@@ -378,7 +365,7 @@ class App extends React.Component<any, any> {
     }
   };
 
-  public testSignPersonalMessage = async (chain: string) => {
+  public testSignPersonalMessage = async (chainId: string) => {
     if (typeof this.state.client === "undefined") {
       throw new Error("WalletConnect is not initialized");
     }
@@ -394,7 +381,9 @@ class App extends React.Component<any, any> {
       const hexMsg = encUtils.utf8ToHex(message, true);
 
       // get ethereum address
-      const address = this.state.accounts.find((account) => account.endsWith(chain))?.split("@")[0];
+      const address = this.state.accounts
+        .find((account) => account.endsWith(chainId))
+        ?.split("@")[0];
       if (address === undefined) throw new Error("Address is not valid");
 
       // personal_sign params
@@ -409,7 +398,7 @@ class App extends React.Component<any, any> {
       // send message
       const result = await this.state.client.request({
         topic: this.state.session.topic,
-        chainId: chain,
+        chainId,
         request: {
           method: "personal_sign",
           params,
@@ -417,11 +406,11 @@ class App extends React.Component<any, any> {
       });
 
       //  get chainId
-      const chainId = Number(chain.split(":")[1]);
+      const chainRef = Number(chainId.split(":")[1]);
 
       // verify signature
       const hash = hashPersonalMessage(message);
-      const valid = await verifySignature(address, result, hash, chainId);
+      const valid = await verifySignature(address, result, hash, chainRef);
 
       // format displayed result
       const formattedResult = {
@@ -439,7 +428,7 @@ class App extends React.Component<any, any> {
     }
   };
 
-  public testSignTypedData = async (chain: string) => {
+  public testSignTypedData = async (chainId: string) => {
     if (typeof this.state.client === "undefined") {
       throw new Error("WalletConnect is not initialized");
     }
@@ -451,7 +440,9 @@ class App extends React.Component<any, any> {
       const message = JSON.stringify(eip712.example);
 
       // get ethereum address
-      const address = this.state.accounts.find((account) => account.endsWith(chain))?.split("@")[0];
+      const address = this.state.accounts
+        .find((account) => account.endsWith(chainId))
+        ?.split("@")[0];
       if (address === undefined) throw new Error("Address is not valid");
 
       // eth_signTypedData params
@@ -465,7 +456,7 @@ class App extends React.Component<any, any> {
       // send message
       const result = await this.state.client.request({
         topic: this.state.session.topic,
-        chainId: chain,
+        chainId,
         request: {
           method: "eth_signTypedData",
           params,
@@ -473,11 +464,11 @@ class App extends React.Component<any, any> {
       });
 
       //  get chainId
-      const chainId = Number(chain.split(":")[1]);
+      const chainRef = Number(chainId.split(":")[1]);
 
       // verify signature
       const hash = hashPersonalMessage(message);
-      const valid = await verifySignature(address, result, hash, chainId);
+      const valid = await verifySignature(address, result, hash, chainRef);
 
       // format displayed result
       const formattedResult = {
@@ -498,17 +489,25 @@ class App extends React.Component<any, any> {
   public handleChainSelectionClick = (chainId: string) => {
     const { chains } = this.state;
     if (chains.includes(chainId)) {
-      this.setState({ chains: chains.filter((chain) => chain !== chainId) });
+      this.setState({ chains: chains.filter((x) => x !== chainId) });
     } else {
       this.setState({ chains: [...chains, chainId] });
     }
+  };
+
+  public getEthereumActions = (): AccountAction[] => {
+    return [
+      { method: "eth_sendTransaction", callback: this.testSendTransaction },
+      { method: "personal_sign", callback: this.testSignPersonalMessage },
+      { method: "eth_signTypedData", callback: this.testSignTypedData },
+    ];
   };
 
   public render = () => {
     const {
       assets,
       accounts,
-      connected,
+      session,
       chains,
       fetching,
       showModal,
@@ -518,15 +517,11 @@ class App extends React.Component<any, any> {
     return (
       <SLayout>
         <Column maxWidth={1000} spanHeight>
-          <Header
-            disconnect={this.disconnect}
-            connected={connected}
-            chainIds={chains}
-            accounts={accounts}
-          />
+          <Header disconnect={this.disconnect} session={session} />
           <SContent>
             {!accounts.length && !assets.length ? (
               <SLanding center>
+                <Banner />
                 <h3>
                   {`Try out WalletConnect`}
                   <br />
@@ -534,12 +529,12 @@ class App extends React.Component<any, any> {
                 </h3>
                 <SButtonContainer>
                   <h6>Select chains:</h6>
-                  {DEFAULT_CHAINS.map((chain) => (
+                  {DEFAULT_CHAINS.map((chainId) => (
                     <Blockchain
-                      key={chain}
-                      chainId={chain}
+                      key={chainId}
+                      chainId={chainId}
                       onClick={this.handleChainSelectionClick}
-                      active={chains.includes(chain)}
+                      active={chains.includes(chainId)}
                     />
                   ))}
                   <SConnectButton
@@ -548,53 +543,28 @@ class App extends React.Component<any, any> {
                     fetching={fetching}
                     disabled={!chains.length}
                   >
-                    {"Connect to WalletConnect"}
+                    {"Connect"}
                   </SConnectButton>
                 </SButtonContainer>
               </SLanding>
             ) : (
               <SBalances>
-                <Banner />
-                <h3>Connected networks</h3>
-                <SBlockchainContainer>
-                  {this.state.chains.map((chain) => (
-                    <Blockchain
-                      key={chain}
-                      address={accounts.find((account) => account.endsWith(chain))?.split("@")[0]}
-                      chainId={chain}
-                      active={chains.includes(chain)}
-                      children={
-                        <SBlockchainChildrenContainer>
-                          <SFullWidthContainer>
-                            <STestButton left onClick={() => this.testSendTransaction(chain)}>
-                              {"eth_sendTransaction"}
-                            </STestButton>
-
-                            <STestButton left onClick={() => this.testSignPersonalMessage(chain)}>
-                              {"personal_sign"}
-                            </STestButton>
-
-                            <STestButton left onClick={() => this.testSignTypedData(chain)}>
-                              {"eth_signTypedData"}
-                            </STestButton>
-                          </SFullWidthContainer>
-                          {!fetching ? (
-                            <AccountAssets
-                              chainId={Number(chain.split(":")[1])}
-                              assets={getAssetsByChainId(assets, chain)}
-                            />
-                          ) : (
-                            <Column center>
-                              <SContainer>
-                                <Loader />
-                              </SContainer>
-                            </Column>
-                          )}
-                        </SBlockchainChildrenContainer>
-                      }
-                    />
-                  ))}
-                </SBlockchainContainer>
+                <h3>Accounts</h3>
+                <SAccounts>
+                  {this.state.accounts.map((account) => {
+                    const [address, chainId] = account.split("@");
+                    return (
+                      <Blockchain
+                        active={true}
+                        fetching={fetching}
+                        address={address}
+                        chainId={chainId}
+                        assets={assets}
+                        actions={this.getEthereumActions()}
+                      />
+                    );
+                  })}
+                </SAccounts>
               </SBalances>
             )}
           </SContent>

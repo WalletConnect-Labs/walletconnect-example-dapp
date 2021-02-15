@@ -1,11 +1,9 @@
 import * as React from "react";
 import styled from "styled-components";
-import { getSupportedChains } from "caip-api";
+import { SessionTypes } from "@walletconnect/types";
 
-import Blockie from "./Blockie";
-
-import { ellipseAddress } from "../helpers";
-import { fonts, responsive, transitions } from "../styles";
+import { fonts, responsive } from "../styles";
+import Button from "./Button";
 
 const SHeader = styled.div`
   margin-top: -1px;
@@ -28,7 +26,7 @@ const SActiveAccount = styled.div`
   font-weight: 500;
 `;
 
-const SActiveChain = styled(SActiveAccount as any)`
+const SActiveSession = styled(SActiveAccount as any)`
   flex-direction: column;
   text-align: left;
   align-items: flex-start;
@@ -42,71 +40,26 @@ const SActiveChain = styled(SActiveAccount as any)`
   }
 `;
 
-interface HeaderStyle {
-  connected: boolean;
-}
-
-const SAddress = styled.p<HeaderStyle>`
-  transition: ${transitions.base};
-  font-weight: bold;
-  margin: ${({ connected }) => (connected ? "-2px auto 0.7em" : "0")};
-`;
-
-const SBlockie = styled(Blockie)`
-  margin-right: 10px;
-`;
-
-const SDisconnect = styled.div<HeaderStyle>`
-  transition: ${transitions.button};
-  font-size: 12px;
-  font-family: monospace;
-  position: absolute;
-  right: 0;
-  top: 20px;
-  opacity: 0.7;
-  cursor: pointer;
-
-  opacity: ${({ connected }) => (connected ? 1 : 0)};
-  visibility: ${({ connected }) => (connected ? "visible" : "hidden")};
-  pointer-events: ${({ connected }) => (connected ? "auto" : "none")};
-
-  &:hover {
-    transform: translateY(-1px);
-    opacity: 0.5;
-  }
-`;
-
 interface HeaderProps {
   disconnect: () => void;
-  connected: boolean;
-  accounts: string[];
-  chainIds: string[];
+  session: SessionTypes.Created | undefined;
 }
 
 const Header = (props: HeaderProps) => {
-  const { disconnect, connected, accounts, chainIds } = props;
-  const supportedChains = getSupportedChains();
-  const chainNames = chainIds ? chainIds.map((chainId) => supportedChains[chainId].name) : null;
-  const address = accounts.length ? accounts[0].split("@")[0] : undefined;
+  const { disconnect, session } = props;
   return (
     <SHeader {...props}>
-      {chainNames && chainNames.length > 0 && (
-        <SActiveChain>
-          <p>{`Connected to`}</p>
-          {chainNames?.map((chainName) => (
-            <p key={chainName}>{chainName}</p>
-          ))}
-        </SActiveChain>
-      )}
-      {address && (
-        <SActiveAccount>
-          <SBlockie address={address} />
-          <SAddress connected={connected}>{ellipseAddress(address)}</SAddress>
-          <SDisconnect connected={connected} onClick={disconnect}>
+      {session ? (
+        <>
+          <SActiveSession>
+            <p>{`Connected to`}</p>
+            <p>{session.peer.metadata.name}</p>
+          </SActiveSession>
+          <Button outline color="red" onClick={disconnect}>
             {"Disconnect"}
-          </SDisconnect>
-        </SActiveAccount>
-      )}
+          </Button>
+        </>
+      ) : null}
     </SHeader>
   );
 };

@@ -1,4 +1,4 @@
-import { ChainConfig } from "caip-wallet";
+import { ChainConfig } from "caip-api";
 
 export interface AssetData {
   symbol: string;
@@ -143,4 +143,9 @@ export interface ChainMetadata extends ChainConfig {
 
 export interface NamespaceMetadata {
   [reference: string]: ChainMetadata;
+}
+
+export interface AccountAction {
+  method: string;
+  callback: (chainId: string) => Promise<void>;
 }
