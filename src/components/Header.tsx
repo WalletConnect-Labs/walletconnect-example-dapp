@@ -13,9 +13,9 @@ const SHeader = styled.div`
   width: 100%;
   height: 100px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 16px;
   @media screen and (${responsive.sm.max}) {
     font-size: ${fonts.size.small};
   }
@@ -37,7 +37,7 @@ const SActiveChain = styled(SActiveAccount as any)`
     margin: 0;
     padding: 0;
   }
-  & p:nth-child(2) {
+  & p:nth-child(n + 2) {
     font-weight: bold;
   }
 `;
@@ -80,19 +80,22 @@ interface HeaderProps {
   disconnect: () => void;
   connected: boolean;
   accounts: string[];
-  chainId: string;
+  chainIds: string[];
 }
 
 const Header = (props: HeaderProps) => {
-  const { disconnect, connected, accounts, chainId } = props;
-  const chainName = chainId ? getSupportedChains()[chainId].name : undefined;
+  const { disconnect, connected, accounts, chainIds } = props;
+  const supportedChains = getSupportedChains();
+  const chainNames = chainIds ? chainIds.map((chainId) => supportedChains[chainId].name) : null;
   const address = accounts.length ? accounts[0].split("@")[0] : undefined;
   return (
     <SHeader {...props}>
-      {chainName && (
+      {chainNames && chainNames.length > 0 && (
         <SActiveChain>
           <p>{`Connected to`}</p>
-          <p>{chainName}</p>
+          {chainNames?.map((chainName) => (
+            <p key={chainName}>{chainName}</p>
+          ))}
         </SActiveChain>
       )}
       {address && (

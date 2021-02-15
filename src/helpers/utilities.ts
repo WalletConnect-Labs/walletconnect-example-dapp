@@ -2,7 +2,7 @@ import { providers } from "ethers";
 import * as encUtils from "enc-utils";
 import { TypedDataUtils } from "eth-sig-util";
 import * as ethUtil from "ethereumjs-util";
-import { ChainData } from "./types";
+import { AssetData, ChainData } from "./types";
 import { SUPPORTED_CHAINS } from "./chains";
 import { eip1271 } from "./eip1271";
 
@@ -193,4 +193,27 @@ export async function verifySignature(
   } else {
     return eip1271.isValidSignature(address, sig, hash, provider);
   }
+}
+
+export function convertHexToNumber(hex: string) {
+  try {
+    return encUtils.hexToNumber(hex);
+  } catch (e) {
+    return hex;
+  }
+}
+
+export function convertHexToUtf8(hex: string) {
+  try {
+    return encUtils.hexToUtf8(hex);
+  } catch (e) {
+    return hex;
+  }
+}
+
+// wont work for goerli
+export function getAssetsByChainId(assets: AssetData[], chain: string) {
+  return assets.filter(
+    (asset) => asset.symbol.toLowerCase() === getChainData(Number(chain.split(":")[1])).short_name,
+  );
 }

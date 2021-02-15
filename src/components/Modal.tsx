@@ -14,7 +14,7 @@ const SLightbox = styled.div<LightboxStyleProps>`
   text-align: center;
   position: absolute;
   width: 100vw;
-  height: 100vh;
+  height: 100%;
   margin-left: -50vw;
   top: ${({ offset }) => (offset ? `-${offset}px` : 0)};
   left: 50%;

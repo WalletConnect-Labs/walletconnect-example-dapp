@@ -1,3 +1,5 @@
+import { ChainConfig } from "caip-wallet";
+
 export interface AssetData {
   symbol: string;
   name: string;
@@ -127,4 +129,18 @@ export interface Method {
   signature: string;
   name: string;
   args: MethodArgument[];
+}
+
+export interface ChainRequestRender {
+  label: string;
+  value: string;
+}
+
+export interface ChainMetadata extends ChainConfig {
+  logo: string;
+  color: string;
+}
+
+export interface NamespaceMetadata {
+  [reference: string]: ChainMetadata;
 }
