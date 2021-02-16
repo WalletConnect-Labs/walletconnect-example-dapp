@@ -123,7 +123,12 @@ const Blockchain: FC<PropsWithChildren<BlockchainProps>> = (
                 <SFullWidthContainer>
                   <h6>Methods</h6>
                   {actions.map((action) => (
-                    <SAction left color={chainMeta.color} onClick={() => action.callback(chainId)}>
+                    <SAction
+                      key={action.method}
+                      left
+                      color={chainMeta.color}
+                      onClick={() => action.callback(chainId)}
+                    >
                       {action.method}
                     </SAction>
                   ))}

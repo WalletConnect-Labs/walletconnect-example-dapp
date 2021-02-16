@@ -2,7 +2,7 @@ import * as encUtils from "enc-utils";
 import * as React from "react";
 import styled from "styled-components";
 
-import WalletConnectClient, { CLIENT_EVENTS } from "@walletconnect/client";
+import Client, { CLIENT_EVENTS } from "@walletconnect/client";
 import QRCodeModal from "@walletconnect/qrcode-modal";
 import { PairingTypes, SessionTypes } from "@walletconnect/types";
 import { getSessionMetadata } from "@walletconnect/utils";
@@ -15,8 +15,13 @@ import Header from "./components/Header";
 import Loader from "./components/Loader";
 import Modal from "./components/Modal";
 import Wrapper from "./components/Wrapper";
-import { DEFAULT_APP_METADATA, DEFAULT_CHAINS, DEFAULT_RELAY_PROVIDER } from "./constants";
-import { ETHEREUM_SIGNING_METHODS } from "./constants/ethereum";
+import {
+  DEFAULT_APP_METADATA,
+  DEFAULT_CHAINS,
+  DEFAULT_LOGGER,
+  DEFAULT_METHODS,
+  DEFAULT_RELAY_PROVIDER,
+} from "./constants";
 import {
   apiGetAccountAssets,
   apiGetAccountNonce,
@@ -139,7 +144,7 @@ const SAccounts = styled(SFullWidthContainer)`
 `;
 
 interface AppState {
-  client: WalletConnectClient | undefined;
+  client: Client | undefined;
   session: SessionTypes.Created | undefined;
   fetching: boolean;
   chains: string[];
@@ -173,7 +178,8 @@ class App extends React.Component<any, any> {
   }
 
   public init = async () => {
-    const client = await WalletConnectClient.init({
+    const client = await Client.init({
+      logger: DEFAULT_LOGGER,
       relayProvider: DEFAULT_RELAY_PROVIDER,
     });
 
@@ -229,7 +235,7 @@ class App extends React.Component<any, any> {
           chains: this.state.chains,
         },
         jsonrpc: {
-          methods: ETHEREUM_SIGNING_METHODS,
+          methods: DEFAULT_METHODS,
         },
       },
     });
@@ -555,6 +561,7 @@ class App extends React.Component<any, any> {
                     const [address, chainId] = account.split("@");
                     return (
                       <Blockchain
+                        key={account}
                         active={true}
                         fetching={fetching}
                         address={address}
