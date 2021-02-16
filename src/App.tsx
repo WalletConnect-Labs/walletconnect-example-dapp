@@ -52,7 +52,7 @@ const SContent = styled(Wrapper as any)`
 `;
 
 const SLanding = styled(Column as any)`
-  height: 600px;
+  /* height: 600px; */
 `;
 
 const SButtonContainer = styled(Column as any)`
@@ -528,11 +528,9 @@ class App extends React.Component<any, any> {
             {!accounts.length && !assets.length ? (
               <SLanding center>
                 <Banner />
-                <h3>
-                  {`Try out WalletConnect`}
-                  <br />
-                  <span>{`v${process.env.REACT_APP_VERSION}`}</span>
-                </h3>
+                <h6>
+                  <span>{`Using v${process.env.REACT_APP_VERSION}`}</span>
+                </h6>
                 <SButtonContainer>
                   <h6>Select chains:</h6>
                   {DEFAULT_CHAINS.map((chainId) => (

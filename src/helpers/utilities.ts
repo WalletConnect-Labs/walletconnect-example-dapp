@@ -2,9 +2,10 @@ import { providers } from "ethers";
 import * as encUtils from "enc-utils";
 import { TypedDataUtils } from "eth-sig-util";
 import * as ethUtil from "ethereumjs-util";
-import { AssetData, ChainData } from "./types";
-import { SUPPORTED_CHAINS } from "./chains";
+
+import { AssetData } from "./types";
 import { eip1271 } from "./eip1271";
+import { getChainConfig } from "caip-api";
 
 export function capitalize(string: string): string {
   return string
@@ -101,31 +102,6 @@ export function isMobile(): boolean {
   return mobile;
 }
 
-export function getChainData(chainId: number): ChainData {
-  const chainData = SUPPORTED_CHAINS.filter((chain: any) => chain.chain_id === chainId)[0];
-
-  if (!chainData) {
-    throw new Error("ChainId missing or not supported");
-  }
-
-  const API_KEY = process.env.REACT_APP_INFURA_PROJECT_ID;
-
-  if (
-    chainData.rpc_url.includes("infura.io") &&
-    chainData.rpc_url.includes("%API_KEY%") &&
-    API_KEY
-  ) {
-    const rpcUrl = chainData.rpc_url.replace("%API_KEY%", API_KEY);
-
-    return {
-      ...chainData,
-      rpc_url: rpcUrl,
-    };
-  }
-
-  return chainData;
-}
-
 export function encodePersonalMessage(msg: string): string {
   const data = encUtils.utf8ToBuffer(msg);
   const buf = Buffer.concat([
@@ -184,7 +160,8 @@ export async function verifySignature(
   hash: string,
   chainId: number,
 ): Promise<boolean> {
-  const rpcUrl = getChainData(chainId).rpc_url;
+  const chainConfig = getChainConfig(`eip155:${chainId}`);
+  const rpcUrl = `https://${chainConfig.rpcUrl}`;
   const provider = new providers.JsonRpcProvider(rpcUrl);
   const bytecode = await provider.getCode(address);
   if (!bytecode || bytecode === "0x" || bytecode === "0x0" || bytecode === "0x00") {
@@ -211,9 +188,9 @@ export function convertHexToUtf8(hex: string) {
   }
 }
 
-// wont work for goerli
-export function getAssetsByChainId(assets: AssetData[], chain: string) {
+export function getAssetsByChainId(assets: AssetData[], chainId: string) {
   return assets.filter(
-    (asset) => asset.symbol.toLowerCase() === getChainData(Number(chain.split(":")[1])).short_name,
+    (asset) =>
+      asset.symbol.toLowerCase() === getChainConfig(chainId).nativeAsset.symbol.toLowerCase(),
   );
 }
