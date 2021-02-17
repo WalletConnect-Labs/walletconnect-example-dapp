@@ -10,7 +10,7 @@ export const PolkadotMetadata: NamespaceMetadata = {
   ["91b171bb158e2d3848fa23a9f1c25182"]: {
     ...config.polkadot["91b171bb158e2d3848fa23a9f1c25182"],
     logo: polkadotLogo,
-    color: "230, 1, 122",
+    rgb: "230, 1, 122",
   },
 };
 

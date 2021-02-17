@@ -25,7 +25,6 @@ import {
 import {
   apiGetAccountAssets,
   apiGetAccountNonce,
-  AssetData,
   AccountAction,
   eip712,
   hashPersonalMessage,
@@ -34,7 +33,7 @@ import {
   convertStringToHex,
   apiGetGasPrices,
   convertAmountToRawNumber,
-  getAssetsByChainId,
+  AccountBalances,
 } from "./helpers";
 import { fonts } from "./styles";
 
@@ -153,7 +152,7 @@ interface AppState {
   uri: string;
   accounts: string[];
   result: any | undefined;
-  assets: AssetData[];
+  balances: AccountBalances;
 }
 
 const INITIAL_STATE: AppState = {
@@ -166,7 +165,7 @@ const INITIAL_STATE: AppState = {
   uri: "",
   accounts: [],
   result: undefined,
-  assets: [],
+  balances: {},
 };
 
 class App extends React.Component<any, any> {
@@ -268,24 +267,25 @@ class App extends React.Component<any, any> {
 
   public onSessionUpdate = async (accounts: string[], chains: string[]) => {
     this.setState({ chains, accounts });
-    await this.getAccountAssets();
+    await this.getAccountBalances();
   };
 
-  public getAccountAssets = async () => {
+  public getAccountBalances = async () => {
     this.setState({ fetching: true });
     try {
-      // get addresses and assets
-      const assetsPromises = this.state.accounts.map((account) => {
-        const [address, chainId] = account.split("@");
-        return apiGetAccountAssets(address, chainId);
-      });
-
-      // while we get goerli to work on the api
-      const assets = (await Promise.allSettled(assetsPromises)).reduce(
-        (assets, result) => (result.status === "fulfilled" ? assets.concat(result.value) : assets),
-        [] as AssetData[],
+      const arr = await Promise.all(
+        this.state.accounts.map(async (account) => {
+          const [address, chainId] = account.split("@");
+          const assets = await apiGetAccountAssets(address, chainId);
+          return { account, assets };
+        }),
       );
-      this.setState({ fetching: false, assets });
+
+      const balances: AccountBalances = {};
+      arr.forEach(({ account, assets }) => {
+        balances[account] = assets;
+      });
+      this.setState({ fetching: false, balances });
     } catch (error) {
       console.error(error);
       this.setState({ fetching: false });
@@ -306,6 +306,7 @@ class App extends React.Component<any, any> {
       const address =
         this.state.accounts.find((account) => account.split("@")[1] === chainId)?.split("@")[0] ||
         "";
+      const account = `${address}@${chainId}`;
 
       // open modal
       this.toggleModal();
@@ -321,7 +322,7 @@ class App extends React.Component<any, any> {
       const gasPrices = await apiGetGasPrices();
       const _gasPrice = gasPrices.slow.price;
 
-      const balance = getAssetsByChainId(this.state.assets, chainId)[0]?.balance || 0;
+      const balance = Number(this.state.balances[account][0].balance || "0");
       if (balance < _gasPrice) {
         const formattedResult = {
           method: "eth_sendTransaction",
@@ -511,7 +512,7 @@ class App extends React.Component<any, any> {
 
   public render = () => {
     const {
-      assets,
+      balances,
       accounts,
       session,
       chains,
@@ -525,7 +526,7 @@ class App extends React.Component<any, any> {
         <Column maxWidth={1000} spanHeight>
           <Header disconnect={this.disconnect} session={session} />
           <SContent>
-            {!accounts.length && !assets.length ? (
+            {!accounts.length && !Object.keys(balances).length ? (
               <SLanding center>
                 <Banner />
                 <h6>
@@ -564,7 +565,7 @@ class App extends React.Component<any, any> {
                         fetching={fetching}
                         address={address}
                         chainId={chainId}
-                        assets={assets}
+                        balances={balances}
                         actions={this.getEthereumActions()}
                       />
                     );

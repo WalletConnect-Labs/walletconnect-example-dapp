@@ -9,7 +9,7 @@ export const CosmosMetadata: NamespaceMetadata = {
   "cosmoshub-3": {
     ...config.cosmos["cosmoshub-3"],
     logo: cosmosLogo,
-    color: "27, 31, 53",
+    rgb: "27, 31, 53",
   },
 };
 

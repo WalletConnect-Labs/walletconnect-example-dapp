@@ -20,29 +20,29 @@ export const EIP155Metadata: NamespaceMetadata = {
     ...config.eip155["1"],
     name: "Ethereum",
     logo: ethereumLogo,
-    color: "99, 125, 234",
+    rgb: "99, 125, 234",
   },
   "5": {
     ...config.eip155["5"],
     logo: goerliLogo,
-    color: "189, 174, 155",
+    rgb: "189, 174, 155",
   },
   "100": {
     ...config.eip155["100"],
     logo: xdaiLogo,
-    color: "73, 169, 166",
+    rgb: "73, 169, 166",
   },
   "137": {
     ...config.eip155["137"],
     name: "Matic",
     logo: maticLogo,
-    color: "43, 109, 239",
+    rgb: "43, 109, 239",
   },
   "79377087078960": {
     ...config.eip155["79377087078960"],
     name: "Arbitrum",
     logo: arbitrumLogo,
-    color: "44, 55, 75",
+    rgb: "44, 55, 75",
   },
 };
 

@@ -138,7 +138,7 @@ export interface ChainRequestRender {
 
 export interface ChainMetadata extends ChainConfig {
   logo: string;
-  color: string;
+  rgb: string;
 }
 
 export interface NamespaceMetadata {
@@ -148,4 +148,8 @@ export interface NamespaceMetadata {
 export interface AccountAction {
   method: string;
   callback: (chainId: string) => Promise<void>;
+}
+
+export interface AccountBalances {
+  [account: string]: AssetData[];
 }

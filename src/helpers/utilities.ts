@@ -3,7 +3,6 @@ import * as encUtils from "enc-utils";
 import { TypedDataUtils } from "eth-sig-util";
 import * as ethUtil from "ethereumjs-util";
 
-import { AssetData } from "./types";
 import { eip1271 } from "./eip1271";
 import { getChainConfig } from "caip-api";
 
@@ -186,11 +185,4 @@ export function convertHexToUtf8(hex: string) {
   } catch (e) {
     return hex;
   }
-}
-
-export function getAssetsByChainId(assets: AssetData[], chainId: string) {
-  return assets.filter(
-    (asset) =>
-      asset.symbol.toLowerCase() === getChainConfig(chainId).nativeAsset.symbol.toLowerCase(),
-  );
 }

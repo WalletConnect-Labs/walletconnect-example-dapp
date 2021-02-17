@@ -7,11 +7,11 @@ import Column from "./Column";
 import Loader from "./Loader";
 
 import { getChainMetadata } from "../chains";
-import { getAssetsByChainId, AccountAction, AssetData, ellipseAddress } from "../helpers";
+import { AccountAction, ellipseAddress, AccountBalances } from "../helpers";
 import { fonts } from "../styles";
 
 interface AccountStyleProps {
-  color: string;
+  rgb: string;
 }
 
 const SAccount = styled.div<AccountStyleProps>`
@@ -22,9 +22,9 @@ const SAccount = styled.div<AccountStyleProps>`
   border-radius: 8px;
   padding: 8px;
   margin: 5px 0;
-  border: ${({ color }) => `2px solid rgb(${color})`};
+  border: ${({ rgb }) => `2px solid rgb(${rgb})`};
   &.active {
-    box-shadow: ${({ color }) => `0 0 8px rgb(${color})`};
+    box-shadow: ${({ rgb }) => `0 0 8px rgb(${rgb})`};
   }
 `;
 
@@ -67,7 +67,7 @@ const SAction = styled(Button as any)`
   height: 44px;
   width: 100%;
   margin: 12px 0;
-  background-color: ${({ color }) => `rgb(${color})`};
+  background-color: ${({ rgb }) => `rgb(${rgb})`};
 `;
 
 const SBlockchainChildrenContainer = styled(SFullWidthContainer)`
@@ -80,19 +80,22 @@ interface BlockchainProps {
   chainId: string;
   address?: string;
   onClick?: (chain: string) => void;
-  assets?: AssetData[];
+  balances?: AccountBalances;
   actions?: AccountAction[];
 }
 
 const Blockchain: FC<PropsWithChildren<BlockchainProps>> = (
   props: PropsWithChildren<BlockchainProps>,
 ) => {
-  const { chainId, address, onClick, active, actions, assets, fetching } = props;
+  const { fetching, chainId, address, onClick, active, balances, actions } = props;
   const chainMeta = getChainMetadata(chainId);
+  const account = typeof address !== "undefined" ? `${address}@${chainId}` : undefined;
+  const assets =
+    typeof account !== "undefined" && typeof balances !== "undefined" ? balances[account] : [];
   return (
     <React.Fragment>
       <SAccount
-        color={chainMeta.color}
+        rgb={chainMeta.rgb}
         onClick={() => onClick && onClick(props.chainId)}
         className={active ? "active" : ""}
       >
@@ -105,7 +108,7 @@ const Blockchain: FC<PropsWithChildren<BlockchainProps>> = (
           {fetching ? (
             <Column center>
               <SContainer>
-                <Loader />
+                <Loader rgb={`rgb(${chainMeta.rgb})`} />
               </SContainer>
             </Column>
           ) : (
@@ -113,10 +116,7 @@ const Blockchain: FC<PropsWithChildren<BlockchainProps>> = (
               {!!assets && assets.length ? (
                 <SFullWidthContainer>
                   <h6>Balances</h6>
-                  <AssetList
-                    chainId={Number(chainId.split(":")[1])}
-                    assets={getAssetsByChainId(assets, chainId)}
-                  />
+                  <AssetList chainId={Number(chainId.split(":")[1])} assets={assets} />
                 </SFullWidthContainer>
               ) : null}
               {!!actions && actions.length ? (
@@ -126,7 +126,7 @@ const Blockchain: FC<PropsWithChildren<BlockchainProps>> = (
                     <SAction
                       key={action.method}
                       left
-                      color={chainMeta.color}
+                      rgb={chainMeta.rgb}
                       onClick={() => action.callback(chainId)}
                     >
                       {action.method}

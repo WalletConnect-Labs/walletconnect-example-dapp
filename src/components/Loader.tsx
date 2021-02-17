@@ -27,6 +27,7 @@ interface LoaderStyleProps {
 
 interface LoaderProps extends LoaderStyleProps {
   color: string;
+  rgb?: string;
 }
 
 const SLoader = styled.svg<LoaderStyleProps>`
@@ -38,7 +39,7 @@ const SLoader = styled.svg<LoaderStyleProps>`
 
 const Loader = (props: LoaderProps) => {
   const { size, color } = props;
-  const rgb = `rgb(${colors[color]})`;
+  const rgb = props.rgb || `rgb(${colors[color]})`;
   return (
     <SLoader viewBox="0 0 186 187" size={size}>
       <g stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">
