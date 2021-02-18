@@ -2126,13 +2126,6 @@
   dependencies:
     "@babel/types" "^7.3.0"
 
-"@types/bignumber.js@^5.0.0":
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/@types/bignumber.js/-/bignumber.js-5.0.0.tgz#d9f1a378509f3010a3255e9cc822ad0eeb4ab969"
-  integrity sha512-0DH7aPGCClywOFaxxjE6UwpN2kQYe9LwuDQMv+zYA97j5GkOMo8e66LYT+a8JYU7jfmUFRZLa9KycxHDsKXJCA==
-  dependencies:
-    bignumber.js "*"
-
 "@types/bn.js@^4.11.3", "@types/bn.js@^4.11.5":
   version "4.11.6"
   resolved "https://registry.yarnpkg.com/@types/bn.js/-/bn.js-4.11.6.tgz#c306c70d9358aaea33cd4eda092a742b9505967c"
@@ -3444,11 +3437,6 @@ big.js@^5.2.2:
   resolved "https://registry.yarnpkg.com/big.js/-/big.js-5.2.2.tgz#65f0af382f578bcdc742bd9c281e9cb2d7768328"
   integrity sha512-vyL2OymJxmarO8gxMr0mhChsO9QGwhynfuu4+MHTAW6czfq9humCB7rKpUjDd9YUiDPU4mzpyupFSvOClAwbmQ==
 
-bignumber.js@*, bignumber.js@^9.0.1:
-  version "9.0.1"
-  resolved "https://registry.yarnpkg.com/bignumber.js/-/bignumber.js-9.0.1.tgz#8d7ba124c882bfd8e43260c67475518d0689e4e5"
-  integrity sha512-IdZR9mh6ahOBv/hYGiXyVuyCetmGJhtYkqLBpTStdhEGjegpPlUawydyaF3pbIOFynJTpllEs+NP+CS9jKFLjA==
-
 binary-extensions@^1.0.0:
   version "1.13.1"
   resolved "https://registry.yarnpkg.com/binary-extensions/-/binary-extensions-1.13.1.tgz#598afe54755b2868a5330d2aff9d4ebb53209b65"
@@ -3808,10 +3796,10 @@ cache-base@^1.0.1:
     union-value "^1.0.0"
     unset-value "^1.0.0"
 
-caip-api@^1.4.3:
-  version "1.4.3"
-  resolved "https://registry.yarnpkg.com/caip-api/-/caip-api-1.4.3.tgz#70a9f6dbb361b2edaa2b07653d6315658228bc73"
-  integrity sha512-Y12LiZD/n8TgCd+hoXLw8RggnMt1U2HnsCqStFh9WN1+7uG3GRZOkjavcS6jH0jPVUJn76w5bw1LAiYCKj+o7Q==
+caip-api@^1.4.4:
+  version "1.4.4"
+  resolved "https://registry.yarnpkg.com/caip-api/-/caip-api-1.4.4.tgz#5af7ad6e7e7df0dac7a5443717fd15a4f521dbd7"
+  integrity sha512-va7/nT/32BdX91XlGj3dM5viqKiMqPyaJMB4z3ETa9Aj+HVApOeX+Zvk5QMjXi8ia007iJW0UMEFlx80O8INdw==
   dependencies:
     "@json-rpc-tools/types" "^1.6.1"
     caip "^0.9.2"

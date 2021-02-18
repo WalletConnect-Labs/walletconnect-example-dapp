@@ -6,6 +6,7 @@ import Client, { CLIENT_EVENTS } from "@walletconnect/client";
 import QRCodeModal from "@walletconnect/qrcode-modal";
 import { PairingTypes, SessionTypes } from "@walletconnect/types";
 import { getSessionMetadata } from "@walletconnect/utils";
+import { BigNumber } from "ethers";
 
 import Banner from "./components/Banner";
 import Blockchain from "./components/Blockchain";
@@ -24,16 +25,12 @@ import {
 } from "./constants";
 import {
   apiGetAccountAssets,
-  apiGetAccountNonce,
   AccountAction,
   eip712,
   hashPersonalMessage,
   verifySignature,
-  sanitizeHex,
-  convertStringToHex,
-  apiGetGasPrices,
-  convertAmountToRawNumber,
   AccountBalances,
+  formatTestTransaction,
 } from "./helpers";
 import { fonts } from "./styles";
 
@@ -314,16 +311,10 @@ class App extends React.Component<any, any> {
       // toggle pending request indicator
       this.setState({ pendingRequest: true });
 
-      // nonce
-      const _nonce = await apiGetAccountNonce(address, chainId);
-      const nonce = sanitizeHex(convertStringToHex(_nonce));
+      const tx = await formatTestTransaction(account);
 
-      // gasPrice
-      const gasPrices = await apiGetGasPrices();
-      const _gasPrice = gasPrices.slow.price;
-
-      const balance = Number(this.state.balances[account][0].balance || "0");
-      if (balance < _gasPrice) {
+      const balance = BigNumber.from(this.state.balances[account][0].balance || "0");
+      if (balance.lt(BigNumber.from(tx.gasPrice).mul(tx.gasLimit))) {
         const formattedResult = {
           method: "eth_sendTransaction",
           address,
@@ -333,18 +324,6 @@ class App extends React.Component<any, any> {
         this.setState({ pendingRequest: false, result: formattedResult || null });
         return;
       }
-
-      const gasPrice = sanitizeHex(convertStringToHex(convertAmountToRawNumber(_gasPrice, 9)));
-
-      // gasLimit
-      const _gasLimit = 21000;
-      const gasLimit = sanitizeHex(convertStringToHex(_gasLimit));
-
-      // value
-      const _value = 0;
-      const value = sanitizeHex(convertStringToHex(_value));
-
-      const tx = [{ from: address, to: address, data: "0x", nonce, gasPrice, gasLimit, value }];
 
       const result = await this.state.client.request({
         topic: this.state.session.topic,
@@ -521,6 +500,7 @@ class App extends React.Component<any, any> {
       pendingRequest,
       result,
     } = this.state;
+    console.log("=====>", balances);
     return (
       <SLayout>
         <Column maxWidth={1000} spanHeight>

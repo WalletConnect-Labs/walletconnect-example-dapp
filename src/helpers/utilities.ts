@@ -1,10 +1,10 @@
-import { providers } from "ethers";
+import { BigNumber, BigNumberish, providers, utils } from "ethers";
 import * as encUtils from "enc-utils";
+import { getChainConfig } from "caip-api";
 import { TypedDataUtils } from "eth-sig-util";
 import * as ethUtil from "ethereumjs-util";
 
 import { eip1271 } from "./eip1271";
-import { getChainConfig } from "caip-api";
 
 export function capitalize(string: string): string {
   return string
@@ -40,29 +40,10 @@ export function ellipseAddress(address = "", width = 10): string {
   return `${address.slice(0, width)}...${address.slice(-width)}`;
 }
 
-export function padLeft(n: string, width: number, z?: string): string {
-  z = z || "0";
-  n = n + "";
-  return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
-}
-
-export function sanitizeHex(hex: string): string {
-  hex = hex.substring(0, 2) === "0x" ? hex.substring(2) : hex;
-  if (hex === "") {
-    return "";
-  }
-  hex = hex.length % 2 !== 0 ? "0" + hex : hex;
-  return "0x" + hex;
-}
-
-export function removeHexPrefix(hex: string): string {
-  return hex.toLowerCase().replace("0x", "");
-}
-
 export function getDataString(func: string, arrVals: any[]): string {
   let val = "";
   for (let i = 0; i < arrVals.length; i++) {
-    val += padLeft(arrVals[i], 64);
+    val += encUtils.padLeft(arrVals[i], 64);
   }
   const data = func + val;
   return data;
@@ -186,3 +167,19 @@ export function convertHexToUtf8(hex: string) {
     return hex;
   }
 }
+
+export const sanitizeDecimals = (value: string, decimals = 18): string => {
+  const [integer, fractional] = value.split(".");
+  const _fractional = fractional
+    ? fractional.substring(0, decimals).replace(/0+$/gi, "")
+    : undefined;
+  return _fractional ? [integer, _fractional].join(".") : integer;
+};
+
+export const toWad = (amount: string, decimals = 18): BigNumber => {
+  return utils.parseUnits(sanitizeDecimals(amount, decimals), decimals);
+};
+
+export const fromWad = (wad: BigNumberish, decimals = 18): string => {
+  return sanitizeDecimals(utils.formatUnits(wad, decimals), decimals);
+};

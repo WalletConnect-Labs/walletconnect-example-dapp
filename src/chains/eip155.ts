@@ -3,6 +3,7 @@ import { config } from "caip-api";
 
 import ethereumLogo from "../assets/ethereum.png";
 import goerliLogo from "../assets/goerli.png";
+import optimismLogo from "../assets/optimism.png";
 import xdaiLogo from "../assets/xdai.png";
 import maticLogo from "../assets/matic.png";
 import arbitrumLogo from "../assets/arbitrum.png";
@@ -26,6 +27,12 @@ export const EIP155Metadata: NamespaceMetadata = {
     ...config.eip155["5"],
     logo: goerliLogo,
     rgb: "189, 174, 155",
+  },
+  "10": {
+    ...config.eip155["10"],
+    name: "Optimism",
+    logo: optimismLogo,
+    rgb: "233, 1, 1",
   },
   "100": {
     ...config.eip155["100"],

@@ -7,7 +7,7 @@ import Column from "./Column";
 import Loader from "./Loader";
 
 import { getChainMetadata } from "../chains";
-import { AccountAction, ellipseAddress, AccountBalances } from "../helpers";
+import { AccountAction, ellipseAddress, AccountBalances, ChainMetadata } from "../helpers";
 import { fonts } from "../styles";
 
 interface AccountStyleProps {
@@ -88,7 +88,12 @@ const Blockchain: FC<PropsWithChildren<BlockchainProps>> = (
   props: PropsWithChildren<BlockchainProps>,
 ) => {
   const { fetching, chainId, address, onClick, active, balances, actions } = props;
-  const chainMeta = getChainMetadata(chainId);
+  let chainMeta: ChainMetadata;
+  try {
+    chainMeta = getChainMetadata(chainId);
+  } catch (e) {
+    return null;
+  }
   const account = typeof address !== "undefined" ? `${address}@${chainId}` : undefined;
   const assets =
     typeof account !== "undefined" && typeof balances !== "undefined" ? balances[account] : [];
