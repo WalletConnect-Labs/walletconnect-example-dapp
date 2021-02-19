@@ -27,7 +27,7 @@ export async function apiGetAccountTransactions(
   return result;
 }
 
-export const apiGetAccountNonce = async (address: string, chainId: string): Promise<string> => {
+export const apiGetAccountNonce = async (address: string, chainId: string): Promise<number> => {
   const ethChainId = chainId.split(":")[1];
   const response = await api.get(`/account-nonce?address=${address}&chainId=${ethChainId}`);
   const { result } = response.data;

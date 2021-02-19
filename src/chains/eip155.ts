@@ -34,6 +34,11 @@ export const EIP155Metadata: NamespaceMetadata = {
     logo: optimismLogo,
     rgb: "233, 1, 1",
   },
+  "69": {
+    ...config.eip155["69"],
+    logo: optimismLogo,
+    rgb: "233, 1, 1",
+  },
   "100": {
     ...config.eip155["100"],
     logo: xdaiLogo,
@@ -45,9 +50,13 @@ export const EIP155Metadata: NamespaceMetadata = {
     logo: maticLogo,
     rgb: "43, 109, 239",
   },
+  "80001": {
+    ...config.eip155["80001"],
+    logo: maticLogo,
+    rgb: "43, 109, 239",
+  },
   "79377087078960": {
     ...config.eip155["79377087078960"],
-    name: "Arbitrum",
     logo: arbitrumLogo,
     rgb: "44, 55, 75",
   },

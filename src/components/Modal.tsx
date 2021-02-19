@@ -114,7 +114,7 @@ interface ModalState {
 interface ModalProps {
   children: React.ReactNode;
   show: boolean;
-  toggleModal: any;
+  closeModal: any;
   opacity?: number;
 }
 
@@ -126,7 +126,7 @@ class Modal extends React.Component<ModalProps, ModalState> {
   public static propTypes = {
     children: PropTypes.node.isRequired,
     show: PropTypes.bool.isRequired,
-    toggleModal: PropTypes.func.isRequired,
+    closeModal: PropTypes.func.isRequired,
     opacity: PropTypes.number,
   };
 
@@ -147,7 +147,7 @@ class Modal extends React.Component<ModalProps, ModalState> {
     }
   }
 
-  public toggleModal = async () => {
+  public closeModal = async () => {
     const d = typeof window !== "undefined" ? document : "";
     const body = d ? d.body || d.getElementsByTagName("body")[0] : "";
     if (body) {
@@ -157,19 +157,19 @@ class Modal extends React.Component<ModalProps, ModalState> {
         body.style.position = "fixed";
       }
     }
-    this.props.toggleModal();
+    this.props.closeModal();
   };
 
   public render() {
     const { offset } = this.state;
     const { children, show, opacity } = this.props;
     return (
-      <SLightbox show={show} offset={offset} opacity={opacity} ref={c => (this.lightbox = c)}>
+      <SLightbox show={show} offset={offset} opacity={opacity} ref={(c) => (this.lightbox = c)}>
         <SModalContainer>
-          <SHitbox onClick={this.toggleModal} />
+          <SHitbox onClick={this.closeModal} />
 
           <SCard>
-            <SCloseButton size={25} color={"dark"} onClick={this.toggleModal} />
+            <SCloseButton size={25} color={"dark"} onClick={this.closeModal} />
             <SModalContent>{children}</SModalContent>
           </SCard>
         </SModalContainer>

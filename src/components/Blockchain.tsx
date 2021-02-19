@@ -1,7 +1,7 @@
 import React, { PropsWithChildren, FC } from "react";
 import styled from "styled-components";
 
-import AssetList from "./AssetList";
+import Asset from "./Asset";
 import Button from "./Button";
 import Column from "./Column";
 import Loader from "./Loader";
@@ -121,7 +121,11 @@ const Blockchain: FC<PropsWithChildren<BlockchainProps>> = (
               {!!assets && assets.length ? (
                 <SFullWidthContainer>
                   <h6>Balances</h6>
-                  <AssetList chainId={Number(chainId.split(":")[1])} assets={assets} />
+                  <Column center>
+                    {assets.map((asset) => (
+                      <Asset key={asset.symbol} asset={asset} />
+                    ))}
+                  </Column>
                 </SFullWidthContainer>
               ) : null}
               {!!actions && actions.length ? (

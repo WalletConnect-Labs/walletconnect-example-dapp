@@ -1,4 +1,3 @@
-import * as encUtils from "enc-utils";
 import * as React from "react";
 import styled from "styled-components";
 
@@ -6,6 +5,7 @@ import Client, { CLIENT_EVENTS } from "@walletconnect/client";
 import QRCodeModal from "@walletconnect/qrcode-modal";
 import { PairingTypes, SessionTypes } from "@walletconnect/types";
 import { getSessionMetadata } from "@walletconnect/utils";
+import * as encUtils from "enc-utils";
 import { BigNumber } from "ethers";
 
 import Banner from "./components/Banner";
@@ -13,15 +13,15 @@ import Blockchain from "./components/Blockchain";
 import Button from "./components/Button";
 import Column from "./components/Column";
 import Header from "./components/Header";
-import Loader from "./components/Loader";
 import Modal from "./components/Modal";
 import Wrapper from "./components/Wrapper";
 import {
   DEFAULT_APP_METADATA,
-  DEFAULT_CHAINS,
+  DEFAULT_MAIN_CHAINS,
   DEFAULT_LOGGER,
   DEFAULT_METHODS,
   DEFAULT_RELAY_PROVIDER,
+  DEFAULT_TEST_CHAINS,
 } from "./constants";
 import {
   apiGetAccountAssets,
@@ -33,6 +33,8 @@ import {
   formatTestTransaction,
 } from "./helpers";
 import { fonts } from "./styles";
+import Toggle from "./components/Toggle";
+import RequestModal from "./modals/RequestModal";
 
 const SLayout = styled.div`
   position: relative;
@@ -64,34 +66,7 @@ const SConnectButton = styled(Button as any)`
   margin: 12px 0;
 `;
 
-const SContainer = styled.div`
-  height: 100%;
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  word-break: break-word;
-`;
-
-const SModalContainer = styled.div`
-  width: 100%;
-  position: relative;
-  word-wrap: break-word;
-`;
-
-const SModalTitle = styled.div`
-  margin: 1em 0;
-  font-size: 20px;
-  font-weight: 700;
-`;
-
-const SModalParagraph = styled.p`
-  margin-top: 30px;
-`;
-
-// @ts-ignore
-const SBalances = styled(SLanding as any)`
+const SAccountsContainer = styled(SLanding as any)`
   height: 100%;
   padding-bottom: 30px;
   & h3 {
@@ -99,25 +74,15 @@ const SBalances = styled(SLanding as any)`
   }
 `;
 
-const STable = styled(SContainer as any)`
-  flex-direction: column;
-  text-align: left;
-`;
-
-const SRow = styled.div`
+const SToggleContainer = styled.div`
   width: 100%;
   display: flex;
-  margin: 6px 0;
-`;
-
-const SKey = styled.div`
-  width: 30%;
-  font-weight: 700;
-`;
-
-const SValue = styled.div`
-  width: 70%;
-  font-family: monospace;
+  justify-content: center;
+  align-items: center;
+  margin: 10px auto;
+  & > p {
+    margin-right: 10px;
+  }
 `;
 
 const SFullWidthContainer = styled.div`
@@ -142,10 +107,12 @@ const SAccounts = styled(SFullWidthContainer)`
 interface AppState {
   client: Client | undefined;
   session: SessionTypes.Created | undefined;
+  testNet: boolean;
   fetching: boolean;
   chains: string[];
-  showModal: boolean;
-  pendingRequest: boolean;
+  pairings: string[];
+  modal: string;
+  pending: boolean;
   uri: string;
   accounts: string[];
   result: any | undefined;
@@ -155,10 +122,12 @@ interface AppState {
 const INITIAL_STATE: AppState = {
   client: undefined,
   session: undefined,
+  testNet: true,
   fetching: false,
   chains: [],
-  showModal: false,
-  pendingRequest: false,
+  pairings: [],
+  modal: "",
+  pending: false,
   uri: "",
   accounts: [],
   result: undefined,
@@ -200,6 +169,11 @@ class App extends React.Component<any, any> {
       },
     );
 
+    this.state.client.on(CLIENT_EVENTS.pairing.created, async (proposal: PairingTypes.Settled) => {
+      if (typeof this.state.client === "undefined") return;
+      this.setState({ pairings: this.state.client.pairing.topics });
+    });
+
     this.state.client.on(CLIENT_EVENTS.session.deleted, (session: SessionTypes.Settled) => {
       if (session.topic !== this.state.session?.topic) return;
       console.log("EVENT", "session_deleted");
@@ -224,6 +198,7 @@ class App extends React.Component<any, any> {
     if (typeof this.state.client === "undefined") {
       throw new Error("WalletConnect is not initialized");
     }
+
     const session = await this.state.client.connect({
       metadata: getSessionMetadata() || DEFAULT_APP_METADATA,
       permissions: {
@@ -257,6 +232,8 @@ class App extends React.Component<any, any> {
     this.setState({ ...INITIAL_STATE, client });
   };
 
+  public toggleTestNets = () => this.setState({ testNet: !this.state.testNet });
+
   public onSessionConnected = async (session: SessionTypes.Settled) => {
     this.setState({ session });
     this.onSessionUpdate(session.state.accounts, session.permissions.blockchain.chains);
@@ -289,7 +266,11 @@ class App extends React.Component<any, any> {
     }
   };
 
-  public toggleModal = () => this.setState({ showModal: !this.state.showModal });
+  public openRequestModal = () => this.setState({ pending: true, modal: "request" });
+
+  public openModal = (modal: string) => this.setState({ modal });
+
+  public closeModal = () => this.setState({ modal: "" });
 
   public testSendTransaction = async (chainId: string) => {
     if (typeof this.state.client === "undefined") {
@@ -306,10 +287,7 @@ class App extends React.Component<any, any> {
       const account = `${address}@${chainId}`;
 
       // open modal
-      this.toggleModal();
-
-      // toggle pending request indicator
-      this.setState({ pendingRequest: true });
+      this.openRequestModal();
 
       const tx = await formatTestTransaction(account);
 
@@ -321,7 +299,7 @@ class App extends React.Component<any, any> {
           valid: false,
           result: "Insufficient funds for intrinsic transaction cost",
         };
-        this.setState({ pendingRequest: false, result: formattedResult || null });
+        this.setState({ pending: false, result: formattedResult || null });
         return;
       }
 
@@ -330,7 +308,7 @@ class App extends React.Component<any, any> {
         chainId,
         request: {
           method: "eth_sendTransaction",
-          params: tx,
+          params: [tx],
         },
       });
 
@@ -338,16 +316,15 @@ class App extends React.Component<any, any> {
       const formattedResult = {
         method: "eth_sendTransaction",
         address,
-        // Change.
         valid: true,
         result,
       };
 
       // display result
-      this.setState({ pendingRequest: false, result: formattedResult || null });
+      this.setState({ pending: false, result: formattedResult || null });
     } catch (error) {
       console.error(error);
-      this.setState({ pendingRequest: false, result: null });
+      this.setState({ pending: false, result: null });
     }
   };
 
@@ -376,10 +353,7 @@ class App extends React.Component<any, any> {
       const params = [hexMsg, address];
 
       // open modal
-      this.toggleModal();
-
-      // toggle pending request indicator
-      this.setState({ pendingRequest: true });
+      this.openRequestModal();
 
       // send message
       const result = await this.state.client.request({
@@ -407,10 +381,10 @@ class App extends React.Component<any, any> {
       };
 
       // display result
-      this.setState({ pendingRequest: false, result: formattedResult || null });
+      this.setState({ pending: false, result: formattedResult || null });
     } catch (error) {
       console.error(error);
-      this.setState({ pendingRequest: false, result: null });
+      this.setState({ pending: false, result: null });
     }
   };
 
@@ -433,11 +407,9 @@ class App extends React.Component<any, any> {
 
       // eth_signTypedData params
       const params = [address, message];
-      // open modal
-      this.toggleModal();
 
-      // toggle pending request indicator
-      this.setState({ pendingRequest: true });
+      // open modal
+      this.openRequestModal();
 
       // send message
       const result = await this.state.client.request({
@@ -465,10 +437,10 @@ class App extends React.Component<any, any> {
       };
 
       // display result
-      this.setState({ pendingRequest: false, result: formattedResult || null });
+      this.setState({ pending: false, result: formattedResult || null });
     } catch (error) {
       console.error(error);
-      this.setState({ pendingRequest: false, result: null });
+      this.setState({ pending: false, result: null });
     }
   };
 
@@ -489,18 +461,18 @@ class App extends React.Component<any, any> {
     ];
   };
 
+  public renderModal = () => {
+    switch (this.state.modal) {
+      case "request":
+        return <RequestModal pending={this.state.pending} result={this.state.result} />;
+      default:
+        return null;
+    }
+  };
+
   public render = () => {
-    const {
-      balances,
-      accounts,
-      session,
-      chains,
-      fetching,
-      showModal,
-      pendingRequest,
-      result,
-    } = this.state;
-    console.log("=====>", balances);
+    const { balances, accounts, session, chains, testNet, fetching, modal } = this.state;
+    const chainOptions = testNet ? DEFAULT_TEST_CHAINS : DEFAULT_MAIN_CHAINS;
     return (
       <SLayout>
         <Column maxWidth={1000} spanHeight>
@@ -514,7 +486,11 @@ class App extends React.Component<any, any> {
                 </h6>
                 <SButtonContainer>
                   <h6>Select chains:</h6>
-                  {DEFAULT_CHAINS.map((chainId) => (
+                  <SToggleContainer>
+                    <p>Testnets Only?</p>
+                    <Toggle active={testNet} onClick={this.toggleTestNets} />
+                  </SToggleContainer>
+                  {chainOptions.map((chainId) => (
                     <Blockchain
                       key={chainId}
                       chainId={chainId}
@@ -533,7 +509,7 @@ class App extends React.Component<any, any> {
                 </SButtonContainer>
               </SLanding>
             ) : (
-              <SBalances>
+              <SAccountsContainer>
                 <h3>Accounts</h3>
                 <SAccounts>
                   {this.state.accounts.map((account) => {
@@ -551,38 +527,12 @@ class App extends React.Component<any, any> {
                     );
                   })}
                 </SAccounts>
-              </SBalances>
+              </SAccountsContainer>
             )}
           </SContent>
         </Column>
-        <Modal show={showModal} toggleModal={this.toggleModal}>
-          {pendingRequest ? (
-            <SModalContainer>
-              <SModalTitle>{"Pending Call Request"}</SModalTitle>
-              <SContainer>
-                <Loader />
-                <SModalParagraph>{"Approve or reject request using your wallet"}</SModalParagraph>
-              </SContainer>
-            </SModalContainer>
-          ) : result ? (
-            <SModalContainer>
-              <SModalTitle>
-                {result.valid ? "Call Request Approved" : "Call Request Failed"}
-              </SModalTitle>
-              <STable>
-                {Object.keys(result).map((key) => (
-                  <SRow key={key}>
-                    <SKey>{key}</SKey>
-                    <SValue>{result[key].toString()}</SValue>
-                  </SRow>
-                ))}
-              </STable>
-            </SModalContainer>
-          ) : (
-            <SModalContainer>
-              <SModalTitle>{"Call Request Rejected"}</SModalTitle>
-            </SModalContainer>
-          )}
+        <Modal show={!!modal} closeModal={this.closeModal}>
+          {this.renderModal()}
         </Modal>
       </SLayout>
     );

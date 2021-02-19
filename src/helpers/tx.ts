@@ -13,7 +13,8 @@ export async function formatTestTransaction(account: string) {
   const [address, chainId] = account.split("@");
   // nonce
   const _nonce = await apiGetAccountNonce(address, chainId);
-  const nonce = encUtils.sanitizeHex(encUtils.utf8ToHex(_nonce));
+
+  const nonce = encUtils.sanitizeHex(encUtils.numberToHex(_nonce));
 
   // gasPrice
   const _gasPrice = await getGasPrice(chainId);
